@@ -158,7 +158,6 @@ resource speechBackendUser 'Microsoft.Authorization/roleAssignments@2022-04-01' 
     principalId: apps.outputs.backendPrincipalId
     principalType: 'ServicePrincipal'
   }
-  dependsOn: [ speech ]
 }
 
 // Cognitive Services User on language account for backend MI (TextAnalytics read)
