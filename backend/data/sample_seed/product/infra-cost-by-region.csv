@@ -1,0 +1,7 @@
+region,monthly_cost_usd,primary_components_pct_gpu_compute_storage_egress,notes
+India,220000,"62/22/10/6",GPU pool A100/H100 80% reserved; Mumbai+Hyderabad redundancy
+SEA-SG (operational),140000,"58/24/12/6",SG control plane; SG-resident inference cluster spinning up
+SEA-ID (estimated build),240000,"60/24/10/6",Jakarta PoP not yet built; cost projected for 2026-Q3 GA
+SEA-VN (estimated build),160000,"58/24/12/6",HCMC PoP not yet built; project 2027
+US,180000,"55/26/12/7",Bay Area + Virginia (CDN + GPU spillover)
+ME (UAE),90000,"50/30/10/10",Single AZ for non-banking customers

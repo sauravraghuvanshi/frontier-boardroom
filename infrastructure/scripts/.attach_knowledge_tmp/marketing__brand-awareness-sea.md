@@ -1,0 +1,12 @@
+# Brand Awareness Sea
+
+| country | aided_awareness_pct | unaided_pct | methodology | sample_size | measurement_date |
+|---|---|---|---|---|---|
+| IN | 68 | 41 | SurveyMonkey + LinkedIn-targeted devs | 3200 | 2026-04-15 |
+| SG | 11 | 2 | LinkedIn-targeted senior devs | 420 | 2026-04-22 |
+| ID | 4 | 0 | Glassdoor-targeted devs at top 30 tech firms | 310 | 2026-04-22 |
+| TH | 6 | 1 | LinkedIn-targeted devs | 180 | 2026-04-25 |
+| VN | 3 | 0 | LinkedIn-targeted devs at top 20 IT services | 150 | 2026-04-25 |
+| MY | 2 | 0 | LinkedIn-targeted devs | 90 | 2026-04-25 |
+| PH | 1 | 0 | LinkedIn-targeted devs | 60 | 2026-04-25 |
+| US | 8 | 1 | LinkedIn-targeted devs at F500 eng orgs | 260 | 2026-04-15 |

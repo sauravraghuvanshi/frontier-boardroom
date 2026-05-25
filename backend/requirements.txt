@@ -1,0 +1,33 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+websockets==13.0
+pydantic==2.9.2
+pydantic-settings==2.5.2
+httpx==0.27.2
+python-dotenv==1.0.1
+structlog==24.4.0
+
+# Azure
+azure-identity==1.18.0
+azure-storage-blob==12.23.1
+azure-ai-projects>=2.1.0
+openai>=1.54.0
+aiohttp>=3.10.0
+azure-ai-language-conversations==1.1.0
+azure-cognitiveservices-speech==1.40.0
+
+# Databricks
+databricks-sdk==0.32.2
+
+# Microsoft Agent Framework
+# TODO(plan): re-enable once Agent Framework GA package is published. Code currently stubs around it.
+# microsoft-agents==0.1.0; python_version >= "3.12"
+
+# OpenTelemetry / App Insights
+azure-monitor-opentelemetry==1.6.4
+
+# Test / lint
+pytest==8.3.3
+pytest-asyncio==0.24.0
+ruff==0.6.9
+mypy==1.11.2

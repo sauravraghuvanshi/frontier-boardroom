@@ -1,0 +1,14 @@
+# Campaign History 2025
+
+| campaign | region | channel | spend_usd | mqls | sqls | closed_won_count | closed_won_arr_usd |
+|---|---|---|---|---|---|---|---|
+| LinkedIn-Q3 | India | paid-social | 80000 | 1240 | 186 | 42 | 478000 |
+| LinkedIn-Q3 | SEA | paid-social | 40000 | 280 | 28 | 3 | 42000 |
+| TechInAsia-booth | SEA | event | 25000 | 95 | 12 | 2 | 68000 |
+| NASSCOM-india-summit | India | event | 42000 | 310 | 58 | 18 | 210000 |
+| Google-ads-Q3 | India | paid-search | 55000 | 860 | 98 | 21 | 250000 |
+| Google-ads-Q3 | SEA | paid-search | 28000 | 210 | 18 | 2 | 28000 |
+| Devfest-Delhi | India | event | 18000 | 420 | 72 | 16 | 189000 |
+| Webinar-onCallAgent | Global | content | 12000 | 1840 | 210 | 38 | 420000 |
+| ContosoBlog-organic | Global | content | 8000 | 3100 | 260 | 52 | 580000 |
+| Podcast-sponsorship-changelog | US | podcast | 32000 | 280 | 42 | 8 | 196000 |

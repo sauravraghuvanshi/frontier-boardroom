@@ -1,0 +1,10 @@
+metric,india,sea,us
+blended_cac_usd,320,736,2480
+sales_cycle_days,42,71,118
+enterprise_conversion_pct,22,14,18
+churn_annual_pct,7,11,5
+avg_seats_at_land,25,32,86
+avg_seats_at_12mo,78,71,164
+median_acv_usd,11200,14800,39600
+poc_duration_days,14,28,21
+free_trial_to_paid_conversion_pct,18,9,12

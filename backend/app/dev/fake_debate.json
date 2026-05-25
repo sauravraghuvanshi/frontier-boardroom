@@ -1,0 +1,56 @@
+{
+  "scenario_id": "sea-expansion",
+  "question": "Should we expand to Southeast Asia in Q1 2026 or double down in India?",
+  "events": [
+    { "type": "turn_start", "agent": "CEO", "model": "foundry:gpt-5", "timestamp": 0 },
+    { "type": "citation", "agent": "CEO", "source_uri": "blob://boardroom-knowledge/strategy/sea_thesis.md", "snippet": "SEA SaaS TAM grew 23% YoY in 2025; SG/MY/ID are early adopters.", "confidence": 0.78, "hops": 1 },
+    { "type": "token", "agent": "CEO", "text": "Team, " },
+    { "type": "token", "agent": "CEO", "text": "let's align on whether SEA expansion is the right Q1 bet. " },
+    { "type": "token", "agent": "CEO", "text": "Vikram, walk us through the numbers." },
+    { "type": "mood", "value": 0.55, "label": "cordial" },
+    { "type": "turn_end", "agent": "CEO", "duration_ms": 5400, "tokens": 32 },
+
+    { "type": "turn_start", "agent": "CFO", "model": "databricks:databricks-claude-sonnet-4-6", "timestamp": 1 },
+    { "type": "citation", "agent": "CFO", "source_uri": "blob://boardroom-knowledge/financials/q4_close.md", "snippet": "Runway 18 months at current burn; SEA Q1 pipeline $4.2M; SEA CAC $736 vs India $320.", "confidence": 0.86, "hops": 2 },
+    { "type": "token", "agent": "CFO", "text": "Pipeline " },
+    { "type": "token", "agent": "CFO", "text": "is 4.2 million dollars for SEA Q1, " },
+    { "type": "token", "agent": "CFO", "text": "but CAC is 2.3 times India. " },
+    { "type": "token", "agent": "CFO", "text": "Runway only takes one bad quarter to bend." },
+    { "type": "mood", "value": 0.42, "label": "debating" },
+    { "type": "turn_end", "agent": "CFO", "duration_ms": 6200, "tokens": 41 },
+
+    { "type": "turn_start", "agent": "CMO", "model": "foundry:grok-3", "timestamp": 2 },
+    { "type": "citation", "agent": "CMO", "source_uri": "blob://boardroom-knowledge/market/sea_brand_panel.md", "snippet": "Brand awareness SG 11% / India 64%. 6-mo seeding required.", "confidence": 0.7, "hops": 1 },
+    { "type": "token", "agent": "CMO", "text": "We have 11 percent awareness in Singapore. " },
+    { "type": "token", "agent": "CMO", "text": "Six months of seeding before pipeline converts." },
+    { "type": "mood", "value": 0.4, "label": "debating" },
+    { "type": "turn_end", "agent": "CMO", "duration_ms": 4800, "tokens": 21 },
+
+    { "type": "turn_start", "agent": "CTO", "model": "foundry:llama-3.3-70b-instruct", "timestamp": 3 },
+    { "type": "citation", "agent": "CTO", "source_uri": "blob://boardroom-knowledge/product/infra_slo.md", "snippet": "SG region p99 latency 142ms; capacity headroom 2.4x.", "confidence": 0.82, "hops": 1 },
+    { "type": "token", "agent": "CTO", "text": "Infra is ready. " },
+    { "type": "token", "agent": "CTO", "text": "Singapore region p99 is 142 milliseconds, headroom is fine." },
+    { "type": "mood", "value": 0.5, "label": "debating" },
+    { "type": "turn_end", "agent": "CTO", "duration_ms": 4100, "tokens": 19 },
+
+    { "type": "turn_start", "agent": "Legal", "model": "databricks:databricks-claude-opus-4-6", "timestamp": 4 },
+    { "type": "citation", "agent": "Legal", "source_uri": "blob://boardroom-knowledge/legal/dpdp_brief.md", "snippet": "SG PDPA and MY PDPA require localized DPAs before any pilot launch.", "confidence": 0.9, "hops": 2 },
+    { "type": "token", "agent": "Legal", "text": "We need localized DPAs in SG and MY first. " },
+    { "type": "token", "agent": "Legal", "text": "Risk is medium without them, low with." },
+    { "type": "mood", "value": 0.55, "label": "converging" },
+    { "type": "turn_end", "agent": "Legal", "duration_ms": 4400, "tokens": 22 },
+
+    { "type": "turn_start", "agent": "CEO", "model": "foundry:gpt-5", "timestamp": 5 },
+    { "type": "token", "agent": "CEO", "text": "Decision: " },
+    { "type": "token", "agent": "CEO", "text": "we pilot Singapore in Q1, capped at 1.5 million dollars, " },
+    { "type": "token", "agent": "CEO", "text": "with DPAs locked before launch and a 1M ARR checkpoint." },
+    { "type": "mood", "value": 0.78, "label": "resolved" },
+    { "type": "turn_end", "agent": "CEO", "duration_ms": 5800, "tokens": 33 },
+
+    {
+      "type": "debate_end",
+      "decision": "Pilot SEA in Singapore Q1, capped $1.5M, DPAs locked first, $1M ARR checkpoint.",
+      "vote": { "CEO": "yes", "CFO": "yes", "CMO": "yes", "CTO": "yes", "Legal": "yes" }
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Subtle background grid for boardroom shell — projector-friendly. */
+.bg-board-grid {
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(99, 102, 241, 0.10), transparent 40%),
+    radial-gradient(circle at 80% 90%, rgba(34, 211, 238, 0.08), transparent 45%);
+}
+
+/* Animated hero gradient. */
+.hero-gradient {
+  background: linear-gradient(
+    115deg,
+    #4338ca 0%,
+    #6366f1 30%,
+    #22d3ee 60%,
+    #818cf8 100%
+  );
+  background-size: 200% 200%;
+  animation: gradientShift 10s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Channel hover slide-in accent. */
+.channel-row {
+  position: relative;
+}
+.channel-row::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #818cf8, #22d3ee);
+  transform: scaleY(0);
+  transform-origin: top;
+  transition: transform 180ms ease;
+}
+.channel-row:hover::before,
+.channel-row.is-active::before {
+  transform: scaleY(1);
+}

@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# Env / secrets
+.env
+.env.local
+*.pem
+*.pfx
+
+# Internal working docs (contain subscription IDs, tenant IDs, resource names)
+DEPLOYMENT.md
+.claude/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Azure
+.azure/
+azure-credentials.json
+
+# Build artifacts
+*.log
+logs/
+tmp/

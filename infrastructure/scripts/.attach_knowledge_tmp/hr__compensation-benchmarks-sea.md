@@ -1,0 +1,15 @@
+# Compensation Benchmarks Sea
+
+| role | country | median_total_comp_usd | p75_total_comp_usd | bonus_pct_of_base | equity_value_4yr_usd |
+|---|---|---|---|---|---|
+| AE-Enterprise | SG | 180000 | 225000 | 30 | 140000 |
+| AE-Enterprise | ID | 95000 | 118000 | 25 | 80000 |
+| AE-Enterprise | VN | 70000 | 88000 | 20 | 55000 |
+| SDR | SG | 78000 | 92000 | 20 | 45000 |
+| SDR | ID | 38000 | 46000 | 15 | 28000 |
+| SDR | VN | 28000 | 34000 | 15 | 22000 |
+| SE-Solutions-Eng | SG | 150000 | 180000 | 15 | 110000 |
+| SE-Solutions-Eng | ID | 70000 | 84000 | 10 | 55000 |
+| Senior-Platform-Eng | SG | 180000 | 220000 | 10 | 160000 |
+| Senior-Platform-Eng | ID | 55000 | 72000 | 10 | 65000 |
+| Country-GM | SG | 260000 | 310000 | 40 | 300000 |

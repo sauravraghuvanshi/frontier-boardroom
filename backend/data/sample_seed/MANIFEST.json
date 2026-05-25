@@ -1,0 +1,479 @@
+[
+  {
+    "path": "company/about-contoso-ai.md",
+    "title": "About Contoso Ai",
+    "owner": "company",
+    "date": "2026-05-25",
+    "tags": [
+      "company"
+    ]
+  },
+  {
+    "path": "company/leadership-and-board.md",
+    "title": "Leadership And Board",
+    "owner": "company",
+    "date": "2026-05-25",
+    "tags": [
+      "company"
+    ]
+  },
+  {
+    "path": "competition/competitor-landscape-sea.md",
+    "title": "Competitor Landscape Sea",
+    "owner": "competition",
+    "date": "2026-05-25",
+    "tags": [
+      "competition"
+    ]
+  },
+  {
+    "path": "competition/pricing-comparison.csv",
+    "title": "Pricing Comparison",
+    "owner": "competition",
+    "date": "2026-05-25",
+    "tags": [
+      "competition"
+    ]
+  },
+  {
+    "path": "competition/pricing-comparison.md",
+    "title": "Pricing Comparison",
+    "owner": "competition",
+    "date": "2026-05-25",
+    "tags": [
+      "competition"
+    ]
+  },
+  {
+    "path": "competition/win-loss-report-2025.md",
+    "title": "Win Loss Report 2025",
+    "owner": "competition",
+    "date": "2026-05-25",
+    "tags": [
+      "competition"
+    ]
+  },
+  {
+    "path": "customers/case-study-acmebank-india.md",
+    "title": "Case Study Acmebank India",
+    "owner": "customers",
+    "date": "2026-05-25",
+    "tags": [
+      "customers"
+    ]
+  },
+  {
+    "path": "customers/case-study-fintech-sg.md",
+    "title": "Case Study Fintech Sg",
+    "owner": "customers",
+    "date": "2026-05-25",
+    "tags": [
+      "customers"
+    ]
+  },
+  {
+    "path": "customers/case-study-itservices-india.md",
+    "title": "Case Study Itservices India",
+    "owner": "customers",
+    "date": "2026-05-25",
+    "tags": [
+      "customers"
+    ]
+  },
+  {
+    "path": "customers/reference-list-2026.md",
+    "title": "Reference List 2026",
+    "owner": "customers",
+    "date": "2026-05-25",
+    "tags": [
+      "customers"
+    ]
+  },
+  {
+    "path": "financials/2025-Q4-pnl.md",
+    "title": "2025 Q4 Pnl",
+    "owner": "financials",
+    "date": "2026-05-25",
+    "tags": [
+      "financials"
+    ]
+  },
+  {
+    "path": "financials/2026-Q1-forecast.md",
+    "title": "2026 Q1 Forecast",
+    "owner": "financials",
+    "date": "2026-05-25",
+    "tags": [
+      "financials"
+    ]
+  },
+  {
+    "path": "financials/opex-breakdown-2026.csv",
+    "title": "Opex Breakdown 2026",
+    "owner": "financials",
+    "date": "2026-05-25",
+    "tags": [
+      "financials"
+    ]
+  },
+  {
+    "path": "financials/opex-breakdown-2026.md",
+    "title": "Opex Breakdown 2026",
+    "owner": "financials",
+    "date": "2026-05-25",
+    "tags": [
+      "financials"
+    ]
+  },
+  {
+    "path": "financials/pricing-scenario-sea-cuts.md",
+    "title": "Pricing Scenario Sea Cuts",
+    "owner": "financials",
+    "date": "2026-05-25",
+    "tags": [
+      "financials"
+    ]
+  },
+  {
+    "path": "financials/runway-and-cash.md",
+    "title": "Runway And Cash",
+    "owner": "financials",
+    "date": "2026-05-25",
+    "tags": [
+      "financials"
+    ]
+  },
+  {
+    "path": "financials/term-sheet-details.md",
+    "title": "Term Sheet Details",
+    "owner": "financials",
+    "date": "2026-05-25",
+    "tags": [
+      "financials"
+    ]
+  },
+  {
+    "path": "financials/unit-economics-by-region.csv",
+    "title": "Unit Economics By Region",
+    "owner": "financials",
+    "date": "2026-05-25",
+    "tags": [
+      "financials"
+    ]
+  },
+  {
+    "path": "financials/unit-economics-by-region.md",
+    "title": "Unit Economics By Region",
+    "owner": "financials",
+    "date": "2026-05-25",
+    "tags": [
+      "financials"
+    ]
+  },
+  {
+    "path": "hr/compensation-benchmarks-sea.csv",
+    "title": "Compensation Benchmarks Sea",
+    "owner": "hr",
+    "date": "2026-05-25",
+    "tags": [
+      "hr"
+    ]
+  },
+  {
+    "path": "hr/compensation-benchmarks-sea.md",
+    "title": "Compensation Benchmarks Sea",
+    "owner": "hr",
+    "date": "2026-05-25",
+    "tags": [
+      "hr"
+    ]
+  },
+  {
+    "path": "hr/hiring-plan-2026.md",
+    "title": "Hiring Plan 2026",
+    "owner": "hr",
+    "date": "2026-05-25",
+    "tags": [
+      "hr"
+    ]
+  },
+  {
+    "path": "hr/talent-availability-sea.md",
+    "title": "Talent Availability Sea",
+    "owner": "hr",
+    "date": "2026-05-25",
+    "tags": [
+      "hr"
+    ]
+  },
+  {
+    "path": "legal/data-residency-by-country.md",
+    "title": "Data Residency By Country",
+    "owner": "legal",
+    "date": "2026-05-25",
+    "tags": [
+      "legal"
+    ]
+  },
+  {
+    "path": "legal/employment-law-sea.md",
+    "title": "Employment Law Sea",
+    "owner": "legal",
+    "date": "2026-05-25",
+    "tags": [
+      "legal"
+    ]
+  },
+  {
+    "path": "legal/gdpr-and-pdpa-summary.md",
+    "title": "Gdpr And Pdpa Summary",
+    "owner": "legal",
+    "date": "2026-05-25",
+    "tags": [
+      "legal"
+    ]
+  },
+  {
+    "path": "legal/ip-and-trademark-risks.md",
+    "title": "Ip And Trademark Risks",
+    "owner": "legal",
+    "date": "2026-05-25",
+    "tags": [
+      "legal"
+    ]
+  },
+  {
+    "path": "market/analyst-reports/gartner-sea-saas-2026.md",
+    "title": "Gartner Sea Saas 2026",
+    "owner": "market",
+    "date": "2026-05-25",
+    "tags": [
+      "market"
+    ]
+  },
+  {
+    "path": "market/analyst-reports/idc-india-cloud-2026.md",
+    "title": "Idc India Cloud 2026",
+    "owner": "market",
+    "date": "2026-05-25",
+    "tags": [
+      "market"
+    ]
+  },
+  {
+    "path": "market/customer-interviews-sea.md",
+    "title": "Customer Interviews Sea",
+    "owner": "market",
+    "date": "2026-05-25",
+    "tags": [
+      "market"
+    ]
+  },
+  {
+    "path": "market/india-vs-sea-cac-benchmarks.csv",
+    "title": "India Vs Sea Cac Benchmarks",
+    "owner": "market",
+    "date": "2026-05-25",
+    "tags": [
+      "market"
+    ]
+  },
+  {
+    "path": "market/india-vs-sea-cac-benchmarks.md",
+    "title": "India Vs Sea Cac Benchmarks",
+    "owner": "market",
+    "date": "2026-05-25",
+    "tags": [
+      "market"
+    ]
+  },
+  {
+    "path": "market/sea-market-tam-sam-som.md",
+    "title": "Sea Market Tam Sam Som",
+    "owner": "market",
+    "date": "2026-05-25",
+    "tags": [
+      "market"
+    ]
+  },
+  {
+    "path": "marketing/brand-awareness-sea.csv",
+    "title": "Brand Awareness Sea",
+    "owner": "marketing",
+    "date": "2026-05-25",
+    "tags": [
+      "marketing"
+    ]
+  },
+  {
+    "path": "marketing/brand-awareness-sea.md",
+    "title": "Brand Awareness Sea",
+    "owner": "marketing",
+    "date": "2026-05-25",
+    "tags": [
+      "marketing"
+    ]
+  },
+  {
+    "path": "marketing/campaign-history-2025.csv",
+    "title": "Campaign History 2025",
+    "owner": "marketing",
+    "date": "2026-05-25",
+    "tags": [
+      "marketing"
+    ]
+  },
+  {
+    "path": "marketing/campaign-history-2025.md",
+    "title": "Campaign History 2025",
+    "owner": "marketing",
+    "date": "2026-05-25",
+    "tags": [
+      "marketing"
+    ]
+  },
+  {
+    "path": "marketing/go-to-market-playbook.md",
+    "title": "Go To Market Playbook",
+    "owner": "marketing",
+    "date": "2026-05-25",
+    "tags": [
+      "marketing"
+    ]
+  },
+  {
+    "path": "marketing/partner-ecosystem-sea.md",
+    "title": "Partner Ecosystem Sea",
+    "owner": "marketing",
+    "date": "2026-05-25",
+    "tags": [
+      "marketing"
+    ]
+  },
+  {
+    "path": "product/agent-eval-rubrics.md",
+    "title": "Agent Eval Rubrics",
+    "owner": "product",
+    "date": "2026-05-25",
+    "tags": [
+      "product"
+    ]
+  },
+  {
+    "path": "product/agent-execution-policy.md",
+    "title": "Agent Execution Policy",
+    "owner": "product",
+    "date": "2026-05-25",
+    "tags": [
+      "product"
+    ]
+  },
+  {
+    "path": "product/ai-incident-history.md",
+    "title": "Ai Incident History",
+    "owner": "product",
+    "date": "2026-05-25",
+    "tags": [
+      "product"
+    ]
+  },
+  {
+    "path": "product/ai-safety-policy.md",
+    "title": "Ai Safety Policy",
+    "owner": "product",
+    "date": "2026-05-25",
+    "tags": [
+      "product"
+    ]
+  },
+  {
+    "path": "product/architecture-model-router.md",
+    "title": "Architecture Model Router",
+    "owner": "product",
+    "date": "2026-05-25",
+    "tags": [
+      "product"
+    ]
+  },
+  {
+    "path": "product/engineering-capacity-2026.md",
+    "title": "Engineering Capacity 2026",
+    "owner": "product",
+    "date": "2026-05-25",
+    "tags": [
+      "product"
+    ]
+  },
+  {
+    "path": "product/infra-cost-by-region.csv",
+    "title": "Infra Cost By Region",
+    "owner": "product",
+    "date": "2026-05-25",
+    "tags": [
+      "product"
+    ]
+  },
+  {
+    "path": "product/infra-cost-by-region.md",
+    "title": "Infra Cost By Region",
+    "owner": "product",
+    "date": "2026-05-25",
+    "tags": [
+      "product"
+    ]
+  },
+  {
+    "path": "product/localization-readiness.md",
+    "title": "Localization Readiness",
+    "owner": "product",
+    "date": "2026-05-25",
+    "tags": [
+      "product"
+    ]
+  },
+  {
+    "path": "product/product-benchmarks.md",
+    "title": "Product Benchmarks",
+    "owner": "product",
+    "date": "2026-05-25",
+    "tags": [
+      "product"
+    ]
+  },
+  {
+    "path": "product/product-suite-overview.md",
+    "title": "Product Suite Overview",
+    "owner": "product",
+    "date": "2026-05-25",
+    "tags": [
+      "product"
+    ]
+  },
+  {
+    "path": "product/security-posture.md",
+    "title": "Security Posture",
+    "owner": "product",
+    "date": "2026-05-25",
+    "tags": [
+      "product"
+    ]
+  },
+  {
+    "path": "product/sla-and-uptime.md",
+    "title": "Sla And Uptime",
+    "owner": "product",
+    "date": "2026-05-25",
+    "tags": [
+      "product"
+    ]
+  },
+  {
+    "path": "product/tech-debt-register.md",
+    "title": "Tech Debt Register",
+    "owner": "product",
+    "date": "2026-05-25",
+    "tags": [
+      "product"
+    ]
+  }
+]

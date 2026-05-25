@@ -1,0 +1,17 @@
+{
+  "vector_store_id": "vs_Dl4jtKh65PHtpGUU59V6WE8o",
+  "agents": {
+    "CEO": {
+      "name": "CEO",
+      "version": "5"
+    },
+    "CMO": {
+      "name": "CMO",
+      "version": "4"
+    },
+    "CTO": {
+      "name": "CTO",
+      "version": "2"
+    }
+  }
+}
