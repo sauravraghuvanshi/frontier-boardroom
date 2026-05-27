@@ -131,6 +131,18 @@ class FoundryProvider(BaseProvider):
         if preamble:  # no user message ever appeared
             input_payload.append({"type": "message", "role": "user", "content": preamble})
 
+        # Collapse consecutive same-role messages (e.g. user→user from peer
+        # quotes + grounded_turn). gpt-5 tolerates non-alternation but
+        # reasoning models on agent_reference don't always — be defensive.
+        if input_payload:
+            collapsed: list[dict] = [input_payload[0]]
+            for item in input_payload[1:]:
+                if item["role"] == collapsed[-1]["role"]:
+                    collapsed[-1]["content"] = f"{collapsed[-1]['content']}\n\n{item['content']}"
+                else:
+                    collapsed.append(item)
+            input_payload = collapsed
+
         cred = DefaultAzureCredential()
         try:
             async with AIProjectClient(endpoint=self.project_endpoint, credential=cred) as project:

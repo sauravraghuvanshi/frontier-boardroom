@@ -14,7 +14,7 @@ from typing import AsyncIterator, Sequence
 
 import httpx
 
-from .base import BaseProvider, ChatMessage
+from .base import BaseProvider, ChatMessage, consolidate_messages
 
 
 class DatabricksProvider(BaseProvider):
@@ -51,7 +51,7 @@ class DatabricksProvider(BaseProvider):
 
         url = f"{self.host}/serving-endpoints/{endpoint}/invocations"
         body = {
-            "messages": [dict(m) for m in messages],
+            "messages": consolidate_messages(messages),
             "max_tokens": max_tokens,
             "temperature": temperature,
             "stream": True,

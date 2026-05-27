@@ -15,6 +15,27 @@ class ChatMessage(dict):
     """OpenAI-compatible {'role': 'system|user|assistant', 'content': str}."""
 
 
+def consolidate_messages(messages: Sequence["ChatMessage"]) -> list[dict]:
+    """Merge consecutive same-role messages into one.
+
+    Anthropic on Databricks Mosaic AI rejects/hangs on non-alternating
+    user/assistant sequences. The boardroom orchestrator appends a peer's
+    turn as a `user` message to every other agent's history, then
+    `base_agent.think()` appends the per-turn grounded_turn as another
+    `user` message — so by turn 2 the next speaker has 2-3 consecutive
+    user messages. Collapse them with `\\n\\n` separators before sending.
+    """
+    out: list[dict] = []
+    for m in messages:
+        role = m.get("role", "user")
+        content = (m.get("content") or "")
+        if out and out[-1]["role"] == role:
+            out[-1]["content"] = f"{out[-1]['content']}\n\n{content}"
+        else:
+            out.append({"role": role, "content": content})
+    return out
+
+
 class BaseProvider(ABC):
     name: str = "base"
 

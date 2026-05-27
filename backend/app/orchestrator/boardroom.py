@@ -96,10 +96,16 @@ class Boardroom:
 
             buffer: list[str] = []
             tokens = 0
-            async for tok in agent.think(grounded_turn, history=history_for_role[role]):
-                buffer.append(tok)
-                tokens += 1
-                await emit({"type": "token", "agent": role, "text": tok})
+            try:
+                async for tok in agent.think(grounded_turn, history=history_for_role[role]):
+                    buffer.append(tok)
+                    tokens += 1
+                    await emit({"type": "token", "agent": role, "text": tok})
+            except Exception as e:  # noqa: BLE001
+                err_msg = f"[{role} provider error: {type(e).__name__}: {e}]"
+                log.error("turn_failed", role=role, error=str(e), model=agent.model_ref)
+                await emit({"type": "token", "agent": role, "text": err_msg})
+                buffer.append(err_msg)
 
             full_text = "".join(buffer).strip() or f"[{role} produced no tokens]"
             history_for_role[role].append({"role": "assistant", "content": full_text})
