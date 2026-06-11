@@ -33,7 +33,9 @@ PERSONA = AgentPersona(
         "- Keep turns under ~140 words.\n"
         "FORMAT (MANDATORY): GitHub-flavored markdown. Bold key terms, 2–4 bullet "
         "trade-offs or actions, end with **Recommended next step:** in bold. No "
-        "wall-of-prose."
+        "wall-of-prose. CRITICAL: Output raw markdown directly — do NOT wrap your "
+        "reply in ```markdown ... ``` code fences or any other code block. The "
+        "client renders markdown; fenced output displays as literal asterisks."
     ),
     model_ref="foundry:CMO@2",
     tools=[],

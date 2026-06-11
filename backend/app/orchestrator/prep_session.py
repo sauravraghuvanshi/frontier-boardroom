@@ -33,6 +33,66 @@ Emit = Callable[[dict], Awaitable[None]]
 Mode = Literal["coach", "drill", "simulate"]
 
 
+class _FenceStripper:
+    """Strip a leading ```markdown / ``` fence and the matching trailing ```
+    from a token stream. gpt-4o (CMO) and gpt-4.1 (CTO) habitually wrap their
+    entire reply in a code fence even when told not to — that turns the body
+    into a literal block and asterisks render raw in the chat bubble.
+
+    Stream-aware: buffers the head until it can decide if a fence is opening,
+    and holds back the last few chars so a trailing fence never reaches the
+    client. Mid-text ``` (legitimate code blocks) pass through unchanged.
+    """
+
+    def __init__(self) -> None:
+        self._lead_buf: list[str] = []
+        self._lead_done = False
+        self._tail = ""
+
+    def feed(self, tok: str) -> str:
+        if not self._lead_done:
+            self._lead_buf.append(tok)
+            joined = "".join(self._lead_buf)
+            stripped = joined.lstrip()
+            if stripped.startswith("```"):
+                nl = stripped.find("\n")
+                if nl == -1:
+                    return ""  # opening fence header not finished yet
+                rest = stripped[nl + 1:]
+                self._lead_done = True
+                self._lead_buf = []
+                return self._holdback(rest)
+            if stripped and not stripped.startswith("`"):
+                self._lead_done = True
+                out = joined
+                self._lead_buf = []
+                return self._holdback(out)
+            return ""
+        return self._holdback(tok)
+
+    def _holdback(self, s: str) -> str:
+        combined = self._tail + s
+        if len(combined) <= 8:
+            self._tail = combined
+            return ""
+        emit = combined[:-8]
+        self._tail = combined[-8:]
+        return emit
+
+    def flush(self) -> str:
+        if not self._lead_done:
+            out = "".join(self._lead_buf)
+            self._lead_buf = []
+            self._lead_done = True
+        else:
+            out = self._tail
+        self._tail = ""
+        rstripped = out.rstrip()
+        if rstripped.endswith("```"):
+            return rstripped[:-3].rstrip()
+        return out
+
+
 class PrepSession:
     def __init__(
         self,
@@ -127,16 +187,25 @@ class PrepSession:
 
         buffer: list[str] = []
         tokens = 0
+        stripper = _FenceStripper()
         try:
             async for tok in agent.think(grounded_turn, history=self._history[responder]):
-                buffer.append(tok)
-                tokens += 1
-                await emit({"type": "token", "agent": responder, "text": tok})
+                clean = stripper.feed(tok)
+                if clean:
+                    buffer.append(clean)
+                    tokens += 1
+                    await emit({"type": "token", "agent": responder, "text": clean})
         except Exception as e:  # noqa: BLE001
             err_msg = f"[{responder} provider error: {type(e).__name__}: {e}]"
             log.error("prep_turn_failed", role=responder, error=str(e), model=agent.model_ref)
             await emit({"type": "token", "agent": responder, "text": err_msg})
             buffer.append(err_msg)
+
+        tail = stripper.flush()
+        if tail:
+            buffer.append(tail)
+            tokens += 1
+            await emit({"type": "token", "agent": responder, "text": tail})
 
         full_text = "".join(buffer).strip() or f"[{responder} produced no tokens]"
         # Persist the conversation: the human's prompt + the agent reply, scoped
