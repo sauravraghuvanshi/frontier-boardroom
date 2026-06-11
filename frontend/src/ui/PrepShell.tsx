@@ -17,7 +17,6 @@ export function PrepShell() {
   const resetPrep = useStore((s) => s.resetPrep);
 
   const { start, send, close } = usePrepStream();
-  const [simulateRole, setSimulateRole] = useState<Role | null>(null);
   const [busy, setBusy] = useState(false);
 
   // The active prep_session_id is bound to (seat, agendaId). When either flips,
@@ -48,9 +47,8 @@ export function PrepShell() {
     setPrepAgenda(id, topic);
   }
 
-  function pickMode(m: PrepMode, sim?: Role) {
+  function pickMode(m: PrepMode) {
     setPrepSubMode(m);
-    setSimulateRole(m === "simulate" ? sim ?? null : null);
   }
 
   async function handleSend(text: string) {
@@ -62,7 +60,7 @@ export function PrepShell() {
         sid = await start(seat, agendaId, agendaTopic ?? "Open prep — no fixed agenda");
         sessionKey.current = `${seat}|${agendaId ?? "open"}`;
       }
-      await send(sid, text, subMode, simulateRole);
+      await send(sid, text, subMode);
     } finally {
       setBusy(false);
     }

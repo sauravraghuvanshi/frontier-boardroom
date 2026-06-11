@@ -20,7 +20,6 @@ const MOOD_TONE: Record<string, string> = {
 const MODE_LABEL: Record<PrepMode, string> = {
   coach: "Coach me",
   drill: "Drill me",
-  simulate: "Simulate seat",
 };
 
 export function PrepThread({ seat, agendaTopic, onSend, disabled }: Props) {
@@ -108,8 +107,8 @@ export function PrepThread({ seat, agendaTopic, onSend, disabled }: Props) {
                     : "Pick a seat on the left to begin"}
                 </div>
                 <div className="text-sm text-white/60 mt-2 max-w-md mx-auto">
-                  Coach mode sharpens your argument · Drill mode pressure-tests
-                  it · Simulate asks "what would another seat push back with?"
+                  Coach mode sharpens your argument · Drill mode hits you with
+                  3-4 contradicting questions per turn.
                 </div>
               </div>
             </div>
@@ -160,9 +159,7 @@ export function PrepThread({ seat, agendaTopic, onSend, disabled }: Props) {
                 ? `Ask AI ${seat} to ${
                     subMode === "coach"
                       ? "sharpen your argument…"
-                      : subMode === "drill"
-                      ? "drill you with the toughest board question…"
-                      : "simulate another seat's pushback…"
+                      : "drill you with 3-4 contradicting board questions…"
                   }`
                 : "Pick a seat first"
             }

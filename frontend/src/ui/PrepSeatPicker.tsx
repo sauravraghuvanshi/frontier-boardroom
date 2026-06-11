@@ -54,7 +54,7 @@ export function PrepSeatPicker({ active, onPick }: Props) {
       </ul>
       <div className="mt-auto px-4 py-3 border-t border-white/5 text-[11px] text-white/40 leading-relaxed">
         Pick the seat you'll occupy in the upcoming board meeting. Your AI
-        counterpart will spar, drill and simulate other seats with you.
+        counterpart will coach you, then drill you hard.
       </div>
     </aside>
   );

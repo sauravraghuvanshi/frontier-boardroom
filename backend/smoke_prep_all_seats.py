@@ -1,6 +1,6 @@
 """Comprehensive live prep smoke: every seat (CEO/CFO/CMO/CTO/Legal) x every
-mode (coach/drill/simulate) against the deployed backend. Mirrors the browser
-flow: open WS without awaiting, POST /message, collect full turn."""
+mode (coach/drill) against the deployed backend. Mirrors the browser flow:
+open WS without awaiting, POST /message, collect full turn."""
 import asyncio
 import json
 import sys
@@ -68,7 +68,6 @@ async def collect_turn(ws, label: str, expect_agent: str) -> dict:
 PROMPTS = {
     "coach":    "Help me defend the SEA expansion plan to the board.",
     "drill":    "Drill me with the toughest pushback I should expect on the SEA expansion plan.",
-    "simulate": "What would the other seat realistically push back with on the SEA expansion plan?",
 }
 
 # (seat, agenda_id, agenda_topic) — pick a real agenda each time
@@ -78,15 +77,6 @@ AGENDAS = {
     "CMO":   ("sea-expansion", "SEA go-to-market positioning"),
     "CTO":   ("sea-expansion", "SEA infra + data residency build-out"),
     "Legal": ("sea-expansion", "SEA data-residency + customer contracts"),
-}
-
-# For simulate mode pick a different seat to push back from
-SIMULATE_TARGET = {
-    "CEO":   "CFO",
-    "CFO":   "Legal",
-    "CMO":   "CTO",
-    "CTO":   "CFO",
-    "Legal": "CEO",
 }
 
 
@@ -108,12 +98,9 @@ async def run_seat(seat: str) -> list[dict]:
         if first.get("type") != "prep_ready":
             return [{"label": f"{seat}/prep_ready", "ok": False, "reason": "no_ready", "evt": first}]
 
-        for mode in ("coach", "drill", "simulate"):
+        for mode in ("coach", "drill"):
             body = {"text": PROMPTS[mode], "mode": mode}
             expect = seat
-            if mode == "simulate":
-                body["simulate_role"] = SIMULATE_TARGET[seat]
-                expect = SIMULATE_TARGET[seat]
             code, _ = post_json(f"/api/v1/prep-session/{sid}/message", body)
             if code != 200:
                 results.append({"label": f"{seat}/{mode}", "ok": False, "reason": f"post {code}"})
@@ -147,7 +134,7 @@ async def main():
         for f in fails:
             print(f"  - {f['label']}: {f.get('reason') or json.dumps({k: v for k, v in f.items() if k not in ('label', 'ok')}, default=str)[:200]}")
         sys.exit(1)
-    print(f"PASS: all {len(all_results)} checks (5 seats x 3 modes) streamed end-to-end on LIVE")
+    print(f"PASS: all {len(all_results)} checks (5 seats x 2 modes) streamed end-to-end on LIVE")
 
 
 asyncio.run(main())

@@ -2,13 +2,11 @@ import { useStore, type PrepMode, type Role } from "../store";
 import { SCENARIOS } from "./ChannelList";
 import { getRoleMeta } from "./MessageBubble";
 
-const ALL_SEATS: Role[] = ["CEO", "CFO", "CMO", "CTO", "Legal"];
-
 type Props = {
   seat: Role | null;
   agendaId: string | null;
   onPickAgenda: (id: string | null, topic: string) => void;
-  onPickMode: (m: PrepMode, simulateRole?: Role) => void;
+  onPickMode: (m: PrepMode) => void;
 };
 
 export function PrepActionsRail({ seat, agendaId, onPickAgenda, onPickMode }: Props) {
@@ -17,8 +15,6 @@ export function PrepActionsRail({ seat, agendaId, onPickAgenda, onPickMode }: Pr
   const seatModel = useStore((s) =>
     seat ? s.modelByRole[seat] : null,
   );
-
-  const otherSeats = seat ? ALL_SEATS.filter((r) => r !== seat) : [];
 
   // Dedup citations by source_uri (last write wins).
   const dedup = new Map<string, (typeof citations)[number]>();
@@ -74,32 +70,8 @@ export function PrepActionsRail({ seat, agendaId, onPickAgenda, onPickMode }: Pr
                 active={subMode === "drill"}
                 onClick={() => onPickMode("drill")}
                 label="Drill me"
-                hint="Tough Qs, one at a time"
+                hint="3-4 sharp Qs, contradicts you"
               />
-            </div>
-            <div className="mt-3">
-              <div className="text-[11px] uppercase tracking-wider text-white/40 mb-1.5">
-                Simulate seat
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                {otherSeats.map((r) => {
-                  const meta = getRoleMeta(r);
-                  return (
-                    <button
-                      key={r}
-                      onClick={() => onPickMode("simulate", r)}
-                      className="rounded-md px-2 py-1.5 text-[12px] border border-white/10 hover:bg-white/5 text-white/80 flex items-center gap-2"
-                    >
-                      <span
-                        className={`w-5 h-5 rounded-full ${meta.bg} flex items-center justify-center text-[10px] font-semibold text-white shrink-0`}
-                      >
-                        {r[0]}
-                      </span>
-                      <span className="truncate">Ask {r}</span>
-                    </button>
-                  );
-                })}
-              </div>
             </div>
           </Section>
 

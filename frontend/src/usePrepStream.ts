@@ -63,20 +63,11 @@ export function usePrepStream() {
   );
 
   const send = useCallback(
-    async (
-      sid: string,
-      text: string,
-      mode: PrepMode,
-      simulateRole?: Role | null,
-    ) => {
+    async (sid: string, text: string, mode: PrepMode) => {
       await fetch(`${API}/api/v1/prep-session/${sid}/message`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          text,
-          mode,
-          simulate_role: mode === "simulate" ? simulateRole : null,
-        }),
+        body: JSON.stringify({ text, mode }),
       });
     },
     [],

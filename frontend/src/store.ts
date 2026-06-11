@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 export type Role = "CEO" | "CFO" | "CMO" | "CTO" | "Legal";
 export type MoodLabel = "cordial" | "debating" | "heated" | "converging" | "resolved";
-export type PrepMode = "coach" | "drill" | "simulate";
+export type PrepMode = "coach" | "drill";
 
 export type Citation = {
   agent: Role;
@@ -26,7 +26,6 @@ export type PrepMessage =
       kind: "user";
       text: string;
       mode: PrepMode;
-      simulateRole: Role | null;
       timestamp: number;
     }
   | {
@@ -209,7 +208,6 @@ export const useStore = create<State>((set, get) => ({
               kind: "user",
               text: evt.text,
               mode: evt.mode,
-              simulateRole: evt.simulate_role || null,
               timestamp: evt.timestamp || Date.now() / 1000,
             },
           ],
