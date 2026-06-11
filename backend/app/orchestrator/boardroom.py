@@ -18,6 +18,7 @@ from ..grounding.foundry_iq_client import retrieve
 from ..telemetry import agent_event, get_logger
 from ..voice.tts import synthesize_with_visemes
 from .a2a_protocol import A2AMessage
+from .briefing import build_briefing
 from .convergence import ConvergenceState
 from .turn_taking import turn_sequence
 
@@ -67,15 +68,7 @@ class Boardroom:
 
             # Build a Boardroom briefing block from the retrieved snippets and
             # inject it as the user turn. Every persona prompt expects this.
-            briefing_lines = ["Boardroom briefing — verbatim excerpts from the company knowledge base:"]
-            for c in citations:
-                src = c.get("source_uri", "unknown")
-                snip = (c.get("snippet") or "").strip()
-                if snip:
-                    briefing_lines.append(f"- [{src}] {snip}")
-            if len(briefing_lines) == 1:
-                briefing_lines.append("- (no excerpts returned for this query)")
-            briefing_block = "\n".join(briefing_lines)
+            briefing_block = build_briefing(citations)
             grounded_turn = (
                 f"{briefing_block}\n\n"
                 f"Boardroom question (scenario={scenario_id or 'open'}): {question}\n"

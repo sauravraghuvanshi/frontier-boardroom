@@ -5,18 +5,20 @@ import { ChatThread } from "./ui/ChatThread";
 import { ParticipantsRail } from "./ui/ParticipantsRail";
 import { AboutPage } from "./ui/AboutPage";
 import { AudienceQuestionPage } from "./ui/AudienceQuestionPage";
+import { PrepShell } from "./ui/PrepShell";
 import { Logo } from "./branding/Logo";
 import { COMPANY } from "./branding/company";
 import { useAudiencePoll } from "./useAudiencePoll";
 import { useStore } from "./store";
 
-type View = "boardroom" | "about" | "audience";
+type View = "boardroom" | "about" | "audience" | "prep";
 
 function detectInitialView(): View {
   if (typeof window === "undefined") return "boardroom";
   const p = window.location.pathname;
   if (p.startsWith("/audience-question")) return "audience";
   if (p.startsWith("/about")) return "about";
+  if (p.startsWith("/prep")) return "prep";
   return "boardroom";
 }
 
@@ -51,7 +53,13 @@ export default function App() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const path =
-      view === "audience" ? "/audience-question" : view === "about" ? "/about" : "/";
+      view === "audience"
+        ? "/audience-question"
+        : view === "about"
+        ? "/about"
+        : view === "prep"
+        ? "/prep"
+        : "/";
     if (window.location.pathname !== path) {
       window.history.replaceState(null, "", path);
     }
@@ -80,6 +88,9 @@ export default function App() {
           <NavBtn active={view === "boardroom"} onClick={() => setView("boardroom")}>
             Boardroom
           </NavBtn>
+          <NavBtn active={view === "prep"} onClick={() => setView("prep")}>
+            Prep
+          </NavBtn>
           <NavBtn active={view === "about"} onClick={() => setView("about")}>
             About {COMPANY.name}
           </NavBtn>
@@ -98,6 +109,8 @@ export default function App() {
       <div className="flex flex-1 overflow-hidden">
         {view === "about" ? (
           <AboutPage />
+        ) : view === "prep" ? (
+          <PrepShell />
         ) : (
           <>
             <ChannelList activeId={activeId} onPick={handlePick} />

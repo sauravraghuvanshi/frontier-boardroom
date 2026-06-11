@@ -72,12 +72,32 @@ type Props = {
   turn: TurnEntry;
   index: number;
   citations: Citation[];
+  // When true, render as a right-aligned human bubble (no avatar, indigo bg).
+  // The `turn.text` is treated as the human's prompt; agent fields are ignored.
+  userMessage?: boolean;
+  liveOverride?: boolean;
 };
 
-export function MessageBubble({ turn, citations }: Props) {
+export function MessageBubble({ turn, citations, userMessage, liveOverride }: Props) {
   const speakingAgent = useStore((s) => s.speakingAgent);
+
+  if (userMessage) {
+    return (
+      <div className="flex justify-end px-6 py-2">
+        <div className="max-w-[70%] bg-[#3b3f8c] text-white rounded-2xl rounded-tr-sm px-4 py-2 shadow-sm">
+          <div className="text-[15px] leading-relaxed whitespace-pre-wrap">
+            {turn.text}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const meta = ROLE_META[turn.agent];
-  const isLive = !turn.done && speakingAgent === turn.agent;
+  const isLive =
+    liveOverride !== undefined
+      ? liveOverride
+      : !turn.done && speakingAgent === turn.agent;
   const badge = modelBadge(turn.model);
   const turnCites = citations.filter((c) => c.agent === turn.agent);
 

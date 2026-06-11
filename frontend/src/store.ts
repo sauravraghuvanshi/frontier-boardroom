@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 export type Role = "CEO" | "CFO" | "CMO" | "CTO" | "Legal";
 export type MoodLabel = "cordial" | "debating" | "heated" | "converging" | "resolved";
+export type PrepMode = "coach" | "drill" | "simulate";
 
 export type Citation = {
   agent: Role;
@@ -18,6 +19,25 @@ export type TurnEntry = {
   done: boolean;
 };
 
+// PrepMessage covers BOTH the human's right-aligned bubble (kind=user) and the
+// AI seat's reply (kind=agent). A single message list keeps render order trivial.
+export type PrepMessage =
+  | {
+      kind: "user";
+      text: string;
+      mode: PrepMode;
+      simulateRole: Role | null;
+      timestamp: number;
+    }
+  | {
+      kind: "agent";
+      agent: Role;
+      model: string;
+      text: string;
+      done: boolean;
+      mode: PrepMode;
+    };
+
 type State = {
   sessionId: string | null;
   connected: boolean;
@@ -29,11 +49,33 @@ type State = {
   vote: Record<string, string> | null;
   frozen: boolean;
   modelByRole: Record<Role, string>;
+
+  // Prep slice — parallel to debate, separate WS connection.
+  prepSessionId: string | null;
+  prepConnected: boolean;
+  prepSeat: Role | null;
+  prepAgendaId: string | null;
+  prepAgendaTopic: string | null;
+  prepSubMode: PrepMode;
+  prepMessages: PrepMessage[];
+  prepCitations: Citation[];
+  prepMood: { value: number; label: MoodLabel };
+  prepSpeakingAgent: Role | null;
+
   setSession: (id: string) => void;
   setConnected: (v: boolean) => void;
   onEvent: (evt: any) => void;
   swapModel: (role: Role, ref: string) => void;
   resetDebate: () => void;
+
+  // Prep actions.
+  setPrepSession: (id: string) => void;
+  setPrepConnected: (v: boolean) => void;
+  setPrepSeat: (r: Role | null) => void;
+  setPrepAgenda: (id: string | null, topic: string | null) => void;
+  setPrepSubMode: (m: PrepMode) => void;
+  onPrepEvent: (evt: any) => void;
+  resetPrep: () => void;
 };
 
 const empty: Record<Role, string> = {
@@ -55,6 +97,17 @@ export const useStore = create<State>((set, get) => ({
   vote: null,
   frozen: false,
   modelByRole: empty,
+
+  prepSessionId: null,
+  prepConnected: false,
+  prepSeat: null,
+  prepAgendaId: null,
+  prepAgendaTopic: null,
+  prepSubMode: "coach",
+  prepMessages: [],
+  prepCitations: [],
+  prepMood: { value: 0.5, label: "cordial" },
+  prepSpeakingAgent: null,
   setSession: (id) => set({ sessionId: id }),
   setConnected: (v) => set({ connected: v }),
   swapModel: (role, ref) =>
@@ -122,6 +175,94 @@ export const useStore = create<State>((set, get) => ({
       case "audio_chunk":
       case "viseme":
       case "tool_call":
+      case "error":
+      default:
+        break;
+    }
+  },
+
+  // ───────────────────────── Prep slice ─────────────────────────
+  setPrepSession: (id) => set({ prepSessionId: id }),
+  setPrepConnected: (v) => set({ prepConnected: v }),
+  setPrepSeat: (r) => set({ prepSeat: r }),
+  setPrepAgenda: (id, topic) =>
+    set({ prepAgendaId: id, prepAgendaTopic: topic }),
+  setPrepSubMode: (m) => set({ prepSubMode: m }),
+  resetPrep: () =>
+    set({
+      prepMessages: [],
+      prepCitations: [],
+      prepMood: { value: 0.5, label: "cordial" },
+      prepSpeakingAgent: null,
+    }),
+  onPrepEvent: (evt) => {
+    const s = get();
+    switch (evt.type) {
+      case "prep_ready":
+        // Server echo on WS connect — no UI state change needed beyond mood reset.
+        break;
+      case "user_message":
+        set({
+          prepMessages: [
+            ...s.prepMessages,
+            {
+              kind: "user",
+              text: evt.text,
+              mode: evt.mode,
+              simulateRole: evt.simulate_role || null,
+              timestamp: evt.timestamp || Date.now() / 1000,
+            },
+          ],
+        });
+        break;
+      case "turn_start":
+        set({
+          prepSpeakingAgent: evt.agent,
+          prepMessages: [
+            ...s.prepMessages,
+            {
+              kind: "agent",
+              agent: evt.agent,
+              model: evt.model,
+              text: "",
+              done: false,
+              mode: evt.mode || "coach",
+            },
+          ],
+        });
+        break;
+      case "token": {
+        const msgs = [...s.prepMessages];
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          const m = msgs[i];
+          if (m.kind === "agent" && m.agent === evt.agent && !m.done) {
+            msgs[i] = { ...m, text: m.text + evt.text };
+            set({ prepMessages: msgs });
+            break;
+          }
+        }
+        break;
+      }
+      case "citation":
+        set({ prepCitations: [...s.prepCitations, evt] });
+        break;
+      case "turn_end": {
+        const msgs = [...s.prepMessages];
+        for (let i = msgs.length - 1; i >= 0; i--) {
+          const m = msgs[i];
+          if (m.kind === "agent" && m.agent === evt.agent && !m.done) {
+            msgs[i] = { ...m, done: true };
+            set({ prepMessages: msgs, prepSpeakingAgent: null });
+            break;
+          }
+        }
+        break;
+      }
+      case "mood":
+        set({ prepMood: { value: evt.value, label: evt.label } });
+        break;
+      case "audio_chunk":
+      case "viseme":
       case "error":
       default:
         break;
