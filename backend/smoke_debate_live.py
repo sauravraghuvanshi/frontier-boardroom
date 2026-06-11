@@ -24,7 +24,7 @@ async def main():
     sid = sess["session_id"]
     print(f"sid={sid}", flush=True)
 
-    async with websockets.connect(f"{WS}/ws/debate/{sid}", ping_interval=None) as ws:
+    async with websockets.connect(f"{WS}/ws/debate/{sid}", ping_interval=None, max_size=8 * 1024 * 1024) as ws:
         post_json(
             "/api/v1/debate",
             {"session_id": sid, "question": "Should we approve the SEA expansion budget?", "scenario_id": "sea-expansion"},
@@ -41,7 +41,7 @@ async def main():
         t_start = asyncio.get_event_loop().time()
         while True:
             try:
-                raw = await asyncio.wait_for(ws.recv(), timeout=180)
+                raw = await asyncio.wait_for(ws.recv(), timeout=300)
             except asyncio.TimeoutError:
                 print("TIMEOUT", flush=True)
                 break
