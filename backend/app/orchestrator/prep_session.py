@@ -15,8 +15,16 @@ Mirrors `Boardroom.run()` but for a HUMAN ↔ single AI agent thread:
 
 from __future__ import annotations
 
+import re
 import time
 from typing import Awaitable, Callable, Literal
+
+_MENTION_RE = re.compile(r"@(CEO|CFO|CMO|CTO|Legal)\b", re.IGNORECASE)
+
+
+def _strip_mentions(text: str) -> str:
+    """Remove @ROLE tokens so the model doesn't echo the routing syntax."""
+    return _MENTION_RE.sub("", text).replace("  ", " ").strip()
 
 from ..agents.providers.base import ChatMessage
 from ..agents.registry import PREP_REGISTRY
@@ -135,32 +143,6 @@ class PrepSession:
             mentions: List of agent names to delegate to (e.g., ["CTO"])
             emit: WS event emitter callback
         """
-        # Handle delegations first (if any)
-        if mentions and self.role == "CEO":
-            for to_role in mentions:
-                try:
-                    result = await stream_delegate_response(
-                        from_role=self.role,
-                        to_role=to_role,
-                        question=user_text,
-                        emit=emit,
-                    )
-                    # Accumulate the briefing block for later injection
-                    self._delegate_briefings[to_role] = result["briefing_block"]
-                    log.info("delegation_accumulated: %s added to briefings", to_role)
-                except ValueError as e:
-                    log.warning("delegation_rejected: %s", e)
-                    await emit({
-                        "type": "error",
-                        "message": str(e),
-                    })
-        elif mentions:
-            log.warning(
-                "delegation_not_allowed: only CEO can delegate, got %s",
-                self.role
-            )
-
-        # Normal prep turn follows
         if mode == "simulate":
             responder = simulate_role or self.role
             if responder not in PREP_REGISTRY:
@@ -169,6 +151,11 @@ class PrepSession:
             responder = self.role
         agent = PREP_REGISTRY[responder]
         t0 = time.perf_counter()
+
+        # Strip @ROLE tokens for downstream use (model + KB retrieval). The raw
+        # text still goes back to the UI via user_message so the human sees what
+        # they typed.
+        clean_text = _strip_mentions(user_text) if mentions else user_text
 
         # Echo the human's message FIRST so it appears before delegations (L-9)
         await emit({
@@ -186,7 +173,7 @@ class PrepSession:
                     result = await stream_delegate_response(
                         from_role=self.role,
                         to_role=to_role,
-                        question=user_text,
+                        question=clean_text,
                         emit=emit,
                     )
                     # Accumulate the briefing block for later injection
@@ -209,7 +196,7 @@ class PrepSession:
             )
 
         # Retrieve grounding for THIS prep question, persona-filtered.
-        retrieval_query = f"{self.agenda_topic}\n\n{user_text}"
+        retrieval_query = f"{self.agenda_topic}\n\n{clean_text}"
         citations = await retrieve(query=retrieval_query, persona=responder, k=3)
         for c in citations:
             await emit({
@@ -242,15 +229,27 @@ class PrepSession:
             )
             mode_marker = f"[Mode: simulate]{sim_hint}"
 
+        delegation_directive = ""
+        if self._delegate_briefings:
+            delegated_names = ", ".join(self._delegate_briefings.keys())
+            delegation_directive = (
+                f" You delegated parts of this question to {delegated_names}; "
+                "their grounded findings appear in the briefing above under "
+                "'Additional context from delegated agents:'. Weave those "
+                "specific numbers, source filenames, and conclusions into your "
+                "answer — do not ignore them."
+            )
+
         grounded_turn = (
             f"{briefing_block}\n\n"
             f"Upcoming board meeting agenda: {self.agenda_topic}\n"
             f"{mode_marker}\n"
-            f"Human {self.role}: {user_text}\n\n"
+            f"Human {self.role}: {clean_text}\n\n"
             "Respond in your prep persona. Cite source filenames inline. "
             "If a number you would normally cite is not in the briefing above, "
             "say 'I don't have that figure in our briefing materials.' "
             "Do NOT think out loud, do NOT narrate your reasoning."
+            f"{delegation_directive}"
         )
 
         await emit({

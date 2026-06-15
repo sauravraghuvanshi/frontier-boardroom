@@ -6,12 +6,20 @@
  *
  * Usage:
  *   const { mentions, cleanText } = parseMentions("@CTO what's the tech spend for SEA?");
- *   // => { mentions: ["CTO"], cleanText: "@CTO what's the tech spend for SEA?" }
+ *   // => { mentions: ["CTO"], cleanText: "what's the tech spend for SEA?" }
  */
 
 const VALID_ROLES = ["CEO", "CFO", "CMO", "CTO", "Legal"] as const;
 
 export type Role = (typeof VALID_ROLES)[number];
+
+const ROLE_BY_UPPER: Record<string, Role> = VALID_ROLES.reduce(
+  (acc, r) => {
+    acc[r.toUpperCase()] = r;
+    return acc;
+  },
+  {} as Record<string, Role>,
+);
 
 export interface MentionParseResult {
   mentions: Role[];
@@ -22,7 +30,8 @@ export interface MentionParseResult {
  * Parse @mentions from text.
  *
  * Regex matches @AGENT (case-insensitive) where AGENT is a valid role.
- * Returns deduplicated mentions and the original text.
+ * Returns deduplicated mentions in canonical case and text with the @ROLE
+ * tokens stripped so the agent sees a bare question.
  */
 export function parseMentions(text: string): MentionParseResult {
   const mentionRegex = /@(CEO|CFO|CMO|CTO|Legal)\b/gi;
@@ -30,15 +39,15 @@ export function parseMentions(text: string): MentionParseResult {
   let match: RegExpExecArray | null;
 
   while ((match = mentionRegex.exec(text)) !== null) {
-    const role = match[1].toUpperCase() as Role;
-    if ((VALID_ROLES as readonly string[]).includes(role)) {
-      mentions.add(role);
-    }
+    const canonical = ROLE_BY_UPPER[match[1].toUpperCase()];
+    if (canonical) mentions.add(canonical);
   }
+
+  const cleanText = text.replace(mentionRegex, "").replace(/\s{2,}/g, " ").trim();
 
   return {
     mentions: Array.from(mentions),
-    cleanText: text,
+    cleanText,
   };
 }
 

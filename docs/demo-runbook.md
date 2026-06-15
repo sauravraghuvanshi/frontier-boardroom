@@ -2,45 +2,51 @@
 
 Total run time: **~9 minutes**. Practice cues, do not improvise model swaps.
 
+The room is a Teams-style chat: left rail = scenario channels, center = live message stream with mood pill + decision card, right rail = participants with inline model-swap dropdown + citation drawer + audience-question QR. (The 3D scene was retired 2026-05-20 — see AD-11.)
+
 ## 0:00 — Cold open (15s)
-- Lights dim, ambient hum.
 - Speaker: *"What if your entire C-suite met for a strategic decision in 90 seconds, with citations on every claim?"*
-- Click **Scenario → SEA Expansion**.
+- Click **Channels → SEA Expansion**. Mood pill resets to **cordial**.
 
 ## 0:30 — The debate begins
-- CEO (`foundry:gpt-5`) opens. Mood meter pulses **cordial**.
-- Watch the citation panel populate as the CEO asks for data.
+- CEO (`foundry:CEO@5` — GPT-5 on Foundry) opens. The bubble shows the model chip; citation chips appear inline as the briefing block is grounded.
+- Right rail begins filling the citation drawer in real time.
 
 ## 1:30 — CFO presents the numbers (the model-swap moment)
-- CFO (`databricks:claude-sonnet-4-5`) gives the SEA pipeline figure ($4.2M Q1) and CAC math.
-- **Pause here.** Speaker: *"Notice the chip — CFO is Claude Sonnet 4.5 running on Azure Databricks Mosaic AI. Watch what happens when I swap him to GPT-5 on Foundry mid-debate."*
-- Open **Model Swap** panel → set CFO to `foundry:gpt-5` → next CFO turn shows new chip and a noticeably different style/voice.
-- Speaker: *"Same boardroom, different brain. The router decides who routes where."*
+- CFO (`databricks:databricks-claude-sonnet-4-6`) gives the SEA pipeline figure and CAC math.
+- **Pause here.** Speaker: *"Notice the chip — CFO is Claude Sonnet 4.6 running on Azure Databricks Mosaic AI. Watch what happens when I swap him to GPT-5 on Foundry mid-debate."*
+- In the **Participants** rail, click CFO → model dropdown → `foundry:CEO@5`. The next CFO turn renders the new chip and a noticeably different voice.
+- Speaker: *"Same boardroom, different brain. The router (`model_router.py`) decides who goes where — never bypassed."*
 
 ## 3:00 — CMO/CTO push back
-- CMO (`foundry:grok-3`) brings brand-awareness signals.
-- CTO (`foundry:llama-3.3-70b-instruct`) raises infra latency and SLOs.
-- Mood meter tilts **debating** → camera goes handheld for a beat.
+- CMO (`foundry:gpt-4o`) brings brand-awareness signals and softened coach/drill framing (L-19).
+- CTO (`foundry:gpt-4.1`) raises infra latency and SLOs.
+- Mood pill tilts **debating**; bubbles tighten in cadence.
 
 ## 4:30 — Legal's risk read
-- Legal (`databricks:claude-opus-4`) cites the DPDP analog and SG/MY DPA requirement.
-- Citation panel highlights `legal/dpdp_brief.md` with confidence and hops.
+- Legal (`databricks:databricks-claude-opus-4-6`) cites the DPDP analog and SG/MY DPA requirement.
+- Right-rail citation drawer highlights `legal/dpdp_brief.md` with confidence and hops.
+- Vote parser will require Legal in `spoken_roles` before convergence fires (L-16).
 
 ## 6:00 — Convergence
-- CEO synthesizes, mood meter slides **converging** → lighting warms.
-- 3 of 5 agents support → convergence detector fires.
+- CEO synthesizes. Mood pill slides **converging**.
+- Convergence detector fires after Legal has spoken; debate stream freezes on `debate_end` (no further tokens allowed).
 
 ## 7:00 — Decision card
-- Decision card appears with vote breakdown.
+- Inline decision card pins in the center pane with parsed votes (reject wins ties — see boardroom.py vote parser).
 - Speaker: *"That's a fully-grounded, multi-provider, citation-backed decision in seven minutes."*
 
+## 7:30 — Prep mode encore (optional)
+- Open **Prep** tab → pick **CEO** seat → choose **drill** sub-mode → ask `@CTO what's the infrastructure cost increase if we expand to SEA?`
+- Speaker: *"One human, one agent — and the CEO can pull a second voice in mid-thread. Watch the delegated agents block surface inside the briefing."*
+
 ## 8:00 — Audience QR
-- Scan QR; demo audience-question route ingests a prompt and re-runs the debate at lower fidelity.
+- Scan the right-rail QR; audience submits a prompt that re-runs the debate at lower fidelity.
 
 ## 8:45 — Outro
-- Hot-swap CEO to Grok-3 to show provider-agnostic chair.
-- Cut to model registry view.
+- Hot-swap CEO to a different Foundry model to show provider-agnostic chair.
+- Show the Participants rail full model registry.
 
 ## Fallback
 - If any provider 5xx's: hit `GET /dev/fake-debate` (or set `USE_FAKE_DEBATE=true`).
-- The fixture replays a recorded SEA debate.
+- The fixture replays a recorded SEA debate end-to-end so the demo never goes silent.

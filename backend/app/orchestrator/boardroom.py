@@ -152,6 +152,7 @@ class Boardroom:
             "vote": vote,
         })
         log.info("debate_end", decision=decision, settings_fake=settings.use_fake_debate)
+        return  # explicit stop — no further events may leak after debate_end
 
 
 _NO_TOKENS = (
