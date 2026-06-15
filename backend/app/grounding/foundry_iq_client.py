@@ -159,9 +159,13 @@ async def retrieve(*, query: str, persona: str, k: int = 3) -> list[dict]:
     if not token:
         return _stub_retrieve(query=query, persona=persona, k=k)
 
+    # Apply persona bias to the search query
+    bias = _PERSONA_BIAS.get(persona, ("market",))
+    biased_query = f"{query} ({' OR '.join(bias)})"
+
     url = f"{search_endpoint}/knowledgebases('{kb_name}')/retrieve"
     payload: dict[str, Any] = {
-        "intents": [{"type": "semantic", "search": query}],
+        "intents": [{"type": "semantic", "search": biased_query}],
         "maxOutputSizeInTokens": 8000,
         "includeActivity": False,
         "knowledgeSourceParams": [
@@ -207,7 +211,7 @@ async def retrieve(*, query: str, persona: str, k: int = 3) -> list[dict]:
             )
         if not out:
             return _stub_retrieve(query=query, persona=persona, k=k)
-        log.info("foundry_iq: kb.retrieve ok kb=%s hits=%d", kb_name, len(out))
+        log.info("foundry_iq: kb.retrieve ok kb=%s hits=%d bias=%s", kb_name, len(out), bias)
         return out
     except Exception as e:  # noqa: BLE001
         log.warning("foundry_iq: kb.retrieve failed (%s); using stub", e)

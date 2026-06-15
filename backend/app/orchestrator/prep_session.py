@@ -170,8 +170,7 @@ class PrepSession:
         agent = PREP_REGISTRY[responder]
         t0 = time.perf_counter()
 
-        # Echo the human's message so the frontend can render the right-aligned
-        # user bubble through the same WS event protocol (L-9).
+        # Echo the human's message FIRST so it appears before delegations (L-9)
         await emit({
             "type": "user_message",
             "text": user_text,
@@ -179,6 +178,35 @@ class PrepSession:
             "simulate_role": simulate_role if mode == "simulate" else None,
             "timestamp": time.time(),
         })
+
+        # Handle delegations after user's message is displayed
+        if mentions and self.role == "CEO":
+            for to_role in mentions:
+                try:
+                    result = await stream_delegate_response(
+                        from_role=self.role,
+                        to_role=to_role,
+                        question=user_text,
+                        emit=emit,
+                    )
+                    # Accumulate the briefing block for later injection
+                    self._delegate_briefings[to_role] = result["briefing_block"]
+                    log.info(
+                        "delegation_accumulated: %s added to briefings, block length=%d",
+                        to_role,
+                        len(result["briefing_block"]),
+                    )
+                except Exception as e:
+                    log.error("delegation_failed: %s: %s", to_role, e, exc_info=True)
+                    await emit({
+                        "type": "error",
+                        "message": f"Delegation to {to_role} failed: {str(e)}",
+                    })
+        elif mentions:
+            log.warning(
+                "delegation_not_allowed: only CEO can delegate, got %s",
+                self.role
+            )
 
         # Retrieve grounding for THIS prep question, persona-filtered.
         retrieval_query = f"{self.agenda_topic}\n\n{user_text}"
@@ -197,10 +225,14 @@ class PrepSession:
 
         # Inject accumulated delegation briefings if any
         if self._delegate_briefings:
+            log.info("injecting_delegation_briefings: agents=%s", list(self._delegate_briefings.keys()))
             delegation_section = "Additional context from delegated agents:\n"
             for agent_name, briefing in self._delegate_briefings.items():
                 delegation_section += f"\n**{agent_name} provided:**\n{briefing}\n"
             briefing_block = f"{briefing_block}\n\n{delegation_section}"
+            log.info("injected: briefing_block now %d chars", len(briefing_block))
+        else:
+            log.info("no_delegated_briefings: _delegate_briefings empty")
 
         mode_marker = f"[Mode: {mode}]"
         if mode == "simulate":

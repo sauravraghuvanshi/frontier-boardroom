@@ -36,17 +36,17 @@ async def stream_delegate_response(
     question: str,
     emit: Callable[[dict[str, Any]], Any],
 ) -> dict[str, Any]:
-    """Stream a delegated agent response within a prep session.
+    """Retrieve delegated agent briefing context within a prep session.
 
     Args:
         from_role: "CEO" (only role allowed to delegate)
         to_role: "CTO" | "CFO" | "CMO" | "Legal" (must be in DELEGATION_HIERARCHY[from_role])
         question: User's question to delegate
-        emit: Async callable to emit WS events
+        emit: Async callable to emit WS events (used for delegation markers only)
 
     Returns:
         {
-            "response": full_response_text,
+            "response": briefing_block,
             "citations": [citation dicts],
             "briefing_block": formatted briefing text for injection
         }
@@ -68,10 +68,7 @@ async def stream_delegate_response(
     if to_role not in PREP_REGISTRY:
         raise ValueError(f"Unknown agent role: {to_role}")
 
-    # Get the agent
-    agent = PREP_REGISTRY[to_role]
-
-    # Emit delegation start
+    # Emit delegation start marker (no visible response bubble)
     await emit({
         "type": "delegation_start",
         "from_role": from_role,
@@ -80,77 +77,28 @@ async def stream_delegate_response(
         "timestamp": __import__("time").time(),
     })
 
-    # Emit turn_start so frontend creates a new message bubble
-    await emit({
-        "type": "turn_start",
-        "agent": to_role,
-        "model": agent.model_ref,
-        "timestamp": __import__("time").time(),
-    })
-
-    # Retrieve CTO-exclusive data
+    # Retrieve agent-exclusive data (silent briefing retrieval)
     citations = await retrieve(query=question, persona=to_role, k=3)
-
-    # Build grounded turn (same pattern as prep_session)
     briefing_block = build_briefing(citations)
-    grounded_turn = (
-        f"{briefing_block}\n\n"
-        f"Context: You are being consulted by {from_role} during a prep session.\n"
-        f"{from_role}'s question: {question}\n\n"
-        f"Respond directly and concisely. Cite source filenames inline. "
-        f"Keep under 150 words."
-    )
 
-    # Stream agent response
-    full_response = ""
-    try:
-        # Get agent history (empty for delegation, we're starting fresh)
-        history = []
-        async for token in agent.think(grounded_turn, history=history):
-            full_response += token
-            # Emit token event (same structure as normal turn)
-            await emit({
-                "type": "token",
-                "agent": to_role,
-                "text": token,
-            })
-    except Exception as e:
-        log.error("delegation: agent.think failed for %s: %s", to_role, e)
-        error_msg = f"Error consulting {to_role}: {str(e)[:100]}"
-        await emit({
-            "type": "token",
-            "agent": to_role,
-            "text": error_msg,
-        })
-        full_response = error_msg
-
-    # Emit delegation end
+    # Emit delegation end marker
     await emit({
         "type": "delegation_end",
         "to_role": to_role,
-        "response_length": len(full_response),
         "citation_count": len(citations),
         "timestamp": __import__("time").time(),
     })
 
-    # Emit turn_end to mark delegation complete
-    await emit({
-        "type": "turn_end",
-        "agent": to_role,
-        "duration_ms": int(((__import__("time").perf_counter() - t0) * 1000)),
-        "tokens": len(full_response.split()),
-    })
-
     log.info(
-        "delegation: %s consulted %s, response %d chars, %d citations",
+        "delegation: %s→%s silent briefing, %d citations, %.0fms",
         from_role,
         to_role,
-        len(full_response),
         len(citations),
+        ((__import__("time").perf_counter() - t0) * 1000),
     )
 
     return {
-        "response": full_response,
+        "response": briefing_block,
         "citations": citations,
         "briefing_block": briefing_block,
     }
