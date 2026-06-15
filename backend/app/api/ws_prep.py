@@ -3,6 +3,10 @@
 Multi-turn loop: accept the WS, look up the PrepSession, then drain the per-session
 asyncio.Queue forever — calling `prep_session.handle_turn()` for each queued
 human message — until the client disconnects.
+
+Handles two types of queued messages:
+1. Normal messages: {"text", "mode", "simulate_role", "mentions"}
+2. Delegation messages: {"type": "delegate", "from_role", "to_role", "question"}
 """
 
 from __future__ import annotations
@@ -13,6 +17,7 @@ from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from ..orchestrator.prep_delegate import stream_delegate_response
 from ..telemetry import get_logger
 from .routes_prep import get_prep_queue, get_prep_session
 
@@ -85,12 +90,23 @@ async def ws_prep(ws: WebSocket, sid: str) -> None:
                 break
             msg = get_task.result()
             try:
-                await session.handle_turn(
-                    user_text=msg["text"],
-                    mode=msg["mode"],
-                    simulate_role=msg.get("simulate_role"),
-                    emit=emit,
-                )
+                if msg.get("type") == "delegate":
+                    # Route delegation directly to stream_delegate_response
+                    await stream_delegate_response(
+                        from_role=msg["from_role"],
+                        to_role=msg["to_role"],
+                        question=msg["question"],
+                        emit=emit,
+                    )
+                else:
+                    # Normal message: route to session.handle_turn()
+                    await session.handle_turn(
+                        user_text=msg["text"],
+                        mode=msg["mode"],
+                        simulate_role=msg.get("simulate_role"),
+                        mentions=msg.get("mentions", []),
+                        emit=emit,
+                    )
             except Exception as e:  # noqa: BLE001
                 log.exception("prep_turn_failed", sid=sid)
                 await emit({"type": "error", "message": str(e)})

@@ -26,6 +26,7 @@ from ..grounding.foundry_iq_client import retrieve
 from ..telemetry import agent_event, get_logger
 from ..voice.tts import synthesize_with_visemes
 from .briefing import build_briefing
+from .prep_delegate import stream_delegate_response
 
 log = get_logger("prep")
 
@@ -113,6 +114,8 @@ class PrepSession:
         # simulated other-seat turns keep their own coherent thread without
         # contaminating the primary seat's history.
         self._history: dict[str, list[ChatMessage]] = {r: [] for r in PREP_REGISTRY}
+        # Accumulated briefing blocks from delegated agents (CEO calls CTO, etc.)
+        self._delegate_briefings: dict[str, str] = {}
 
     async def handle_turn(
         self,
@@ -120,9 +123,44 @@ class PrepSession:
         user_text: str,
         mode: Mode,
         simulate_role: str | None,
+        mentions: list[str] | None,
         emit: Emit,
     ) -> None:
-        """Run one prep turn — retrieve → brief → ask agent → stream tokens."""
+        """Run one prep turn — optionally delegate, retrieve → brief → ask agent → stream tokens.
+
+        Args:
+            user_text: The human's input
+            mode: "coach" | "drill" | "simulate"
+            simulate_role: If mode="simulate", which role to simulate
+            mentions: List of agent names to delegate to (e.g., ["CTO"])
+            emit: WS event emitter callback
+        """
+        # Handle delegations first (if any)
+        if mentions and self.role == "CEO":
+            for to_role in mentions:
+                try:
+                    result = await stream_delegate_response(
+                        from_role=self.role,
+                        to_role=to_role,
+                        question=user_text,
+                        emit=emit,
+                    )
+                    # Accumulate the briefing block for later injection
+                    self._delegate_briefings[to_role] = result["briefing_block"]
+                    log.info("delegation_accumulated: %s added to briefings", to_role)
+                except ValueError as e:
+                    log.warning("delegation_rejected: %s", e)
+                    await emit({
+                        "type": "error",
+                        "message": str(e),
+                    })
+        elif mentions:
+            log.warning(
+                "delegation_not_allowed: only CEO can delegate, got %s",
+                self.role
+            )
+
+        # Normal prep turn follows
         if mode == "simulate":
             responder = simulate_role or self.role
             if responder not in PREP_REGISTRY:
@@ -156,6 +194,13 @@ class PrepSession:
             })
 
         briefing_block = build_briefing(citations)
+
+        # Inject accumulated delegation briefings if any
+        if self._delegate_briefings:
+            delegation_section = "Additional context from delegated agents:\n"
+            for agent_name, briefing in self._delegate_briefings.items():
+                delegation_section += f"\n**{agent_name} provided:**\n{briefing}\n"
+            briefing_block = f"{briefing_block}\n\n{delegation_section}"
 
         mode_marker = f"[Mode: {mode}]"
         if mode == "simulate":

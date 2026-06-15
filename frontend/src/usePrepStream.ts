@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useStore, type Role, type PrepMode } from "./store";
+import { parseMentions } from "./utils/mentionParser";
 
 const API = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 const WS = import.meta.env.VITE_WS_BASE || "ws://localhost:8000";
@@ -64,10 +65,11 @@ export function usePrepStream() {
 
   const send = useCallback(
     async (sid: string, text: string, mode: PrepMode) => {
+      const { mentions } = parseMentions(text);
       await fetch(`${API}/api/v1/prep-session/${sid}/message`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text, mode }),
+        body: JSON.stringify({ text, mode, mentions }),
       });
     },
     [],

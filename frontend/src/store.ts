@@ -259,6 +259,14 @@ export const useStore = create<State>((set, get) => ({
       case "mood":
         set({ prepMood: { value: evt.value, label: evt.label } });
         break;
+      case "delegation_start":
+        // Delegation begins; store the delegated agent for UI feedback if needed
+        // For now, no UI state change — all delegation events flow as tokens
+        break;
+      case "delegation_end":
+        // Delegation complete; briefing block will be injected into next turn
+        // onPrepEvent doesn't track briefings directly — that's done server-side
+        break;
       case "audio_chunk":
       case "viseme":
       case "error":

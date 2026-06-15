@@ -61,7 +61,7 @@ _PERSONA_BIAS = {
     "CEO": ("strategy", "market"),
     "CFO": ("financials", "market"),
     "CMO": ("marketing", "market", "competition"),
-    "CTO": ("product",),
+    "CTO": ("product", "cto_exclusive", "tech-spend", "tech-debt"),
     "Legal": ("legal", "hr"),
 }
 

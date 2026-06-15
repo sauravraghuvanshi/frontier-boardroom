@@ -24,5 +24,11 @@ resource container 'Microsoft.Storage/storageAccounts/blobServices/containers@20
   properties: { publicAccess: 'None' }
 }
 
+resource containerCTO 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
+  parent: blob
+  name: 'cto-knowledge'
+  properties: { publicAccess: 'None' }
+}
+
 output id string = sa.id
 output name string = sa.name

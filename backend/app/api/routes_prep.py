@@ -50,6 +50,7 @@ class PrepMessageRequest(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
     mode: Literal["coach", "drill", "simulate"]
     simulate_role: Optional[str] = None
+    mentions: Optional[list[str]] = None  # Agent names to delegate to (e.g., ["CTO"])
 
 
 class PrepMessageResponse(BaseModel):
@@ -90,5 +91,6 @@ async def post_prep_message(sid: str, req: PrepMessageRequest) -> PrepMessageRes
         "text": req.text,
         "mode": req.mode,
         "simulate_role": req.simulate_role,
+        "mentions": req.mentions or [],
     })
     return PrepMessageResponse(queued=True)
