@@ -41,7 +41,10 @@ export function PrepSeatPicker({ active, onPick }: Props) {
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-medium truncate">
-                    {seat}
+                    {meta.name}
+                    <span className="ml-1.5 text-[11px] font-normal text-white/40">
+                      · {seat}
+                    </span>
                   </span>
                   <span className="block text-[11px] text-white/50 truncate">
                     {meta.title}

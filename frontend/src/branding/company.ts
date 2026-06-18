@@ -10,7 +10,7 @@ export const COMPANY = {
   blurb:
     "Contoso AI builds world-class AI agents that automate the daily tasks of engineers — built in India, for the world.",
   stage: "Series B (in flight)",
-  hq: "Delhi, India",
+  hq: "Chennai, India",
   founded: "2021",
   website: "contoso.ai",
 
@@ -27,7 +27,7 @@ export const COMPANY = {
   people: {
     headcountToday: 110,
     breakdown: [
-      { region: "India (Delhi HQ)", count: 92 },
+      { region: "India (Chennai HQ)", count: 92 },
       { region: "United States", count: 18 },
       { region: "Southeast Asia (planned)", count: 0 },
     ],

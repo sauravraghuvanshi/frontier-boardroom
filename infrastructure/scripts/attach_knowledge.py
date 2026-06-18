@@ -77,7 +77,7 @@ PERSONAS: dict[str, dict[str, str]] = {
     "CTO": {
         "model": "DeepSeek-V3.2-Speciale",
         "instructions": (
-            "You are Ravi, CTO of Frontier Corp.\n"
+            "You are Karthik, CTO of Frontier Corp.\n"
             "RAG-STRICT RULE: Every claim about engineering capacity, tech debt, "
             "infra cost, localization readiness, product velocity MUST come from "
             "file_search against the boardroom knowledge base. If the search returns "

@@ -13,7 +13,7 @@ const ROLE_META: Record<
     ring: "ring-sky-400/40",
   },
   CFO: {
-    name: "Vikram",
+    name: "Senthil",
     title: "Chief Financial Officer",
     bg: "bg-rose-500",
     ring: "ring-rose-400/40",
@@ -25,7 +25,7 @@ const ROLE_META: Record<
     ring: "ring-emerald-400/40",
   },
   CTO: {
-    name: "Ravi",
+    name: "Karthik",
     title: "Chief Technology Officer",
     bg: "bg-fuchsia-500",
     ring: "ring-fuchsia-400/40",

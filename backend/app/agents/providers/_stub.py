@@ -25,8 +25,8 @@ _CANNED: dict[str, dict[str, list[str]]] = {
     "foundry": {
         "CEO": [
             "Team, I want to hear the strongest cases for and against the Singapore pilot. "
-            "Vikram, walk us through the numbers — I want CAC, payback, and the dilution math. "
-            "Priya, brand-awareness gap and how long seeding takes. Arjun, infra readiness. "
+            "Senthil, walk us through the numbers — I want CAC, payback, and the dilution math. "
+            "Priya, brand-awareness gap and how long seeding takes. Karthik, infra readiness. "
             "Meera, the compliance picture. Let's stay evidence-driven.",
             "Decision: we approve a capped Singapore pilot at $1.5M with DPAs locked first "
             "and a $1M ARR checkpoint before any further expansion. Strong support across "

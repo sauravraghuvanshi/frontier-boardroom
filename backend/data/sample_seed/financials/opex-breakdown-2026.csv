@@ -1,15 +1,15 @@
 category,monthly_usd,annual_usd,notes
-salaries-india,520000,6240000,92 FTE Delhi HQ
+salaries-india,520000,6240000,92 FTE Chennai HQ
 salaries-us,310000,3720000,18 FTE Inc subsidiary
 salaries-sea-projected,150000,1800000,12 hires conditional 2026
 cloud-foundry,180000,2160000,GPT/Grok/Llama inference via Microsoft Foundry
 cloud-databricks,90000,1080000,Anthropic Claude on Mosaic AI
-cloud-azure-gpu-pool,112000,1344000,Delhi NCR + Hyderabad H100 reservation
+cloud-azure-gpu-pool,112000,1344000,Chennai + Hyderabad H100 reservation
 cloud-other-storage-egress,38000,456000,Blob storage Key Vault App Insights
 saas-tooling,28000,336000,Linear Github Slack Notion etc
 sales-marketing,160000,1920000,LinkedIn ads events PR
 legal-finance,42000,504000,Trilegal Allen-Gledhill KPMG retainer
-office-india,18000,216000,Delhi HQ lease + utilities
+office-india,18000,216000,Chennai HQ lease + utilities
 office-us,6000,72000,WeWork NYC
 travel,22000,264000,annual onsite + customer-facing
 contingency,24000,288000,2% buffer

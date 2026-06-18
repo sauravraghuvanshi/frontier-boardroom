@@ -13,14 +13,14 @@ We do not build:
 - Customer-support chatbots (different market segment).
 
 ## Founding & history
-- **Founded**: Jul 2021, Delhi, India.
+- **Founded**: Jul 2021, Chennai, India.
 - **Founders**: 2 (CEO and CTO).
 - **Seed**: $3M (Lightspeed India, Aug 2021).
 - **Series A**: $14M (Accel + Lightspeed extension, Aug 2024) at $80M post-money.
 - **Series B**: in flight — $30M @ $250M post-money, lead under term-sheet diligence (see `financials/term-sheet-details.md`).
 
 ## Where we operate
-- **HQ**: Delhi NCR, India (engineering, GTM, finance).
+- **HQ**: Chennai, India (engineering, GTM, finance).
 - **US subsidiary**: Contoso AI Inc., Delaware. Sales & customer success only — no engineering in US.
 - **SEA expansion**: planned 2026 (Singapore entity in flight, Indonesia EOR-first).
 

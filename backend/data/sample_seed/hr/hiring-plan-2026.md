@@ -12,7 +12,7 @@
 - 2 SRE / infra (India GPU pool, residency tooling)
 - 2 frontend engineers (IDE plugins, admin console)
 - 1 security engineer (SOC 2 Type II remediation)
-- 8 enterprise AEs (Bangalore, Mumbai, Delhi)
+- 8 enterprise AEs (Bangalore, Mumbai, Chennai)
 - 4 customer success engineers (deployed alongside top-20 accounts)
 
 ## SEA detail (+12, conditional)

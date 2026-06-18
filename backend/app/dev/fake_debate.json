@@ -6,7 +6,7 @@
     { "type": "citation", "agent": "CEO", "source_uri": "blob://boardroom-knowledge/strategy/sea_thesis.md", "snippet": "SEA SaaS TAM grew 23% YoY in 2025; SG/MY/ID are early adopters.", "confidence": 0.78, "hops": 1 },
     { "type": "token", "agent": "CEO", "text": "Team, " },
     { "type": "token", "agent": "CEO", "text": "let's align on whether SEA expansion is the right Q1 bet. " },
-    { "type": "token", "agent": "CEO", "text": "Vikram, walk us through the numbers." },
+    { "type": "token", "agent": "CEO", "text": "Senthil, walk us through the numbers." },
     { "type": "mood", "value": 0.55, "label": "cordial" },
     { "type": "turn_end", "agent": "CEO", "duration_ms": 5400, "tokens": 32 },
 

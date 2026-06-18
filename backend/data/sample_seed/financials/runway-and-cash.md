@@ -7,7 +7,7 @@
 - Runway if SEA greenlit: **~14 months** (incremental +$0.65M/mo steady state)
 
 ## Cash composition
-- Operating account, ICICI Bank Delhi: $11.4M (working capital)
+- Operating account, ICICI Bank Chennai: $11.4M (working capital)
 - US dollar account, SVB-First Citizens: $9.8M (Inc subsidiary, customer payments)
 - AAA money-market sweep (Vanguard VMFXX-equivalent): $4.0M (treasury reserve)
 
