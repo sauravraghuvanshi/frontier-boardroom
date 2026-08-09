@@ -1,150 +1,358 @@
-# Frontier Boardroom
+<p align="center">
+  <img src="docs/assets/frontier-boardroom-hero.svg" alt="Frontier Boardroom: five AI executives debating around a shared decision" width="100%" />
+</p>
 
-> Five frontier AI models, one boardroom channel. CEO (GPT-5) · CFO (Claude Sonnet 4.5) · CMO (Grok-4) · CTO (GPT-4.1) · Legal (Claude Opus). Debating *your* question, live, in a Microsoft Teams-style chat — built for founders and CXOs.
+<p align="center">
+  <strong>A multi-model AI executive team that debates strategic questions, cites company knowledge, and converges on a decision in real time.</strong>
+</p>
 
-OpenAI, xAI, Meta, and Mistral are served via **Microsoft Foundry** (1st party).
-Anthropic Claude is served via **Azure Databricks Mosaic AI Model Serving** (external model).
-A backend [`model_router.py`](backend/app/agents/model_router.py) abstracts both. Same agent code, two clouds.
-
----
-
-## Live (prod, corp sub)
-
-- **Frontend:** https://app-frontier-prod-frontend.azurewebsites.net
-- **Backend:**  https://app-frontier-prod-backend.azurewebsites.net/health
-- Full Azure resource inventory, parked items, and rebuild/redeploy commands: [`DEPLOYMENT.md`](DEPLOYMENT.md).
-
-## Status (2026-05-25 late — live-deploy hardening; backend `rag-2026-05-25b` / frontend `prod-2026-05-25b`)
-
-All five seats produce grounded, markdown-formatted turns. Three earlier 05-25 bugs (CEO wall-of-prose, CMO empty bubble, Legal silent + all-yes vote) plus three late-day deploy bugs are fixed:
-
-- **CEO (Aanya) wall of prose:** added the same `FORMAT (MANDATORY)` GFM directive the other personas already had — bold key terms, 2–4 bullet trade-offs, final `**Decision:**` / `**Ask:**` line.
-- **CMO (Priya) empty bubble:** `grok-4-1-fast-reasoning` routes its entire final answer through reasoning-channel events, so the L-13 CoT filter silenced it. `foundry_provider.py` now buffers reasoning deltas and yields them only when `output_text` produced zero tokens (L-15).
-- **Legal silent + all-yes hardcoded vote:** `boardroom.py` tracks `spoken_roles` (Legal must be in it before convergence breaks), `_parse_vote()` regex-matches each persona's last message with reject-wins-on-tie, and `_extract_decision()` prefers a `**Decision:**` line from the CEO (L-16).
-- **Live frontend hung on "Convening the boardroom…":** the deployed bundle had `http://localhost:8000` baked in (Vite inlines `import.meta.env.VITE_*` at build, L-6). Rebuilt `frontier-frontend:prod-2026-05-25b` with `--build-arg VITE_API_BASE=https://...backend.azurewebsites.net` + `VITE_WS_BASE=wss://...`. App Service was caching `:latest` so the explicit tag had to be pinned on the web app (L-18) to force a pull.
-- **CTO (Ravi) using DeepSeek + leaking CoT preamble:** `MODEL_CTO=foundry:CTO@1` was version-pinned to the old DeepSeek-backed agent revision; rebinding the Foundry agent to gpt-4.1 at `@6` did NOT update the backend (L-17). Switched `MODEL_CTO=foundry:gpt-4.1` (raw deployment) to bypass the agent wrapper, which had stale `file_search` + MCP tools causing the "Ravi typing" hang.
-- **Model chip showed "CTO@6":** added `"CTO@6": "gpt-4.1 · RAG"` and `"gpt-4.1": "gpt-4.1"` mappings to `MessageBubble.tsx` + `ParticipantsRail.tsx`.
-
-Also live: ten grounded scenario channels, About page for fictional "Aksara Cloud", branded indigo/cyan/amber palette + logo + Inter typography, audience-question QR flow (`/audience-question` form → in-memory inbox → 3s poll on main display starts a new debate).
-
-### Next session
-
-1. **BUG — debate keeps running after decision pins.** Observed 2026-05-25 PM on SEA Expansion: decision card + full vote panel rendered, yet **all five agents kept talking** below it. Decision must be terminal — orchestrator should `return` from `Boardroom.run` immediately after emitting `debate_end`, and the frontend should freeze the thread on receipt of `debate_end`.
-2. **Manual UI smoke** on the live frontend — Ravi chip reads `gpt-4.1` (no DeepSeek leak), Legal disagrees, decision card pins amber on convergence, audience-question QR round-trips.
-3. **Optional follow-ups:** rotate the Databricks PAT; wire the Language sentiment SDK call in `backend/app/voice/sentiment.py`; refresh `docs/demo-runbook.md` for the 10 channels + audience flow + CTO=gpt-4.1; promote briefing-injection (L-12), reasoning-fallback (L-15), vote-parsing (L-16), MODEL_* version-pinning audit (L-17), and explicit-tag container deploys (L-18) into `.claude/patterns.md`.
-
-```bash
-# Smoke
-curl -fsS https://app-frontier-dev-backend.azurewebsites.net/health
-
-# Provider probe (once Foundry + Databricks creds are wired)
-az webapp ssh -g rg-frontier-boardroom-dev -n app-frontier-dev-backend \
-  --command "python -m app.agents.model_router probe"
-
-# Tail backend logs
-az webapp log tail -g rg-frontier-boardroom-dev -n app-frontier-dev-backend
-```
-
-Walk [`docs/demo-runbook.md`](docs/demo-runbook.md) for the full stage script
-(model-swap moment is the keynote payoff).
+<p align="center">
+  <a href="https://app-frontier-prod-frontend.azurewebsites.net">Live demo</a>
+  ·
+  <a href="#run-locally">Run locally</a>
+  ·
+  <a href="#deploy-to-azure">Deploy to Azure</a>
+  ·
+  <a href="docs/demo-runbook.md">Demo runbook</a>
+</p>
 
 ---
 
-## Quick start (under 10 minutes)
+## What is Frontier Boardroom?
+
+Frontier Boardroom is an open-source demonstration of five AI agents acting as a
+virtual C-suite:
+
+- **CEO** facilitates the discussion and synthesizes the decision.
+- **CFO** evaluates financial impact, runway, and commercial risk.
+- **CMO** represents customers, positioning, and go-to-market strategy.
+- **CTO** assesses architecture, delivery capacity, and technical trade-offs.
+- **Legal** examines regulatory, contractual, privacy, and employment risk.
+
+Ask the board a strategic question such as _"Should we expand into Southeast
+Asia next quarter?"_ Each executive retrieves relevant evidence, responds from
+its own perspective, challenges the other agents, and contributes to a final
+recommendation and vote.
+
+The application also includes **Prep mode** for private, one-to-one coaching with
+any executive persona. A user in the CEO seat can delegate a question to another
+seat with an `@mention`, for example `@CTO estimate the delivery risk`, and then
+receive a CEO synthesis grounded in the delegated response.
+
+> The included Aksara Cloud company, scenarios, and knowledge base are fictional
+> demo data. Replace them with your own approved content before using the project
+> for real business decisions.
+
+## Why use it?
+
+Frontier Boardroom is useful as:
+
+| Use case | What it demonstrates |
+| --- | --- |
+| Executive decision workshop | Multiple specialist agents debate one strategic question instead of producing isolated answers. |
+| Architecture reference | Provider-independent routing across Microsoft Foundry and Azure Databricks Mosaic AI. |
+| Grounded AI demo | Every agent shares one retrieval layer and returns source citations with factual claims. |
+| Model comparison | Models can be reassigned to executive roles without changing persona or orchestration code. |
+| Board-meeting preparation | Leaders can coach, pressure-test, and delegate questions before a meeting. |
+| Keynote or customer demo | Streaming responses, audience questions, voting, and a recorded fallback create a resilient live experience. |
+
+## Product experience
+
+1. Select a prepared scenario or enter a custom strategic question.
+2. Watch five executives respond in a live, Teams-style conversation.
+3. Open citations to inspect the evidence behind an argument.
+4. Follow the server-controlled mood as the discussion moves from cordial to
+   resolved.
+5. Swap an agent's model during the session to compare providers.
+6. Review the final decision and each executive's vote.
+7. Switch to Prep mode for a private coaching or pressure-testing session.
+
+## Architecture
+
+<p align="center">
+  <img src="docs/assets/architecture.svg" alt="Frontier Boardroom architecture diagram" width="920" />
+</p>
+
+The FastAPI backend owns orchestration, grounding, model routing, mood, and
+speech. The React client receives structured events over WebSockets and never
+decides debate state on its own.
+
+- **Model routing:** every model reference uses
+  `<provider>:<endpoint>`. OpenAI, xAI, Meta, and Mistral models are routed to
+  Microsoft Foundry; Anthropic models are routed to Azure Databricks Mosaic AI.
+- **Grounding:** every persona retrieves through the shared Foundry IQ client.
+  Agents never read Blob Storage directly.
+- **Streaming:** turns, tokens, citations, mood changes, audio, visemes, and the
+  final decision are WebSocket events.
+- **Identity:** Azure deployments use managed identity for Azure resources.
+  Secrets required by external model endpoints are stored in Key Vault.
+- **Demo safety:** the recorded `/dev/fake-debate` experience keeps the
+  application demonstrable when live model services are unavailable.
+
+### Technology
+
+| Layer | Main technologies |
+| --- | --- |
+| Frontend | React 18, TypeScript, Vite, Zustand, Tailwind CSS |
+| Backend | Python 3.12, FastAPI, Pydantic v2, WebSockets |
+| Models | Microsoft Foundry and Azure Databricks Mosaic AI Model Serving |
+| Knowledge | Microsoft Foundry IQ, Azure AI Search, Azure Blob Storage |
+| Speech and emotion | Azure AI Speech, visemes, Azure AI Language |
+| Hosting and operations | Azure App Service, ACR, Key Vault, Application Insights, Bicep |
+
+## Run locally
+
+### Prerequisites
+
+- Git
+- Docker Desktop with Docker Compose
+- Optional for native development: Python 3.12 and Node.js 20
+- Optional for live models: an Azure subscription with the services described
+  in [Deploy to Azure](#deploy-to-azure)
+
+### Option 1: Docker Compose
+
+This is the quickest way to run both applications.
 
 ```bash
-# 1. Clone & enter
-git clone <repo> frontier-boardroom && cd frontier-boardroom
-
-# 2. Fill in .env (only the bits you have — fake-debate works without credentials)
+git clone https://github.com/sauravraghuvanshi/frontier-boardroom.git
+cd frontier-boardroom
 cp .env.example .env
-
-# 3a. Native (recommended for local dev)
-cd backend && python -m venv .venv && .venv/Scripts/python -m pip install -r requirements.txt
-.venv/Scripts/python -m uvicorn app.main:app --reload --port 8000 &
-cd ../frontend && npm install && npm run dev -- --host 0.0.0.0
-
-# 3b. Or Docker
 docker compose up --build
-
-# 4. Open the boardroom
-open http://localhost:5173
 ```
 
-The landing screen is a Microsoft Teams-style chat — left rail lists 4 scenario channels (SEA Expansion, $30M Term Sheet, Competitor Launch, AI Safety Incident) plus a "New topic" composer. Click a channel and the C-suite starts posting in the center pane; participants and their live model assignments sit on the right rail.
+On Windows PowerShell, use `Copy-Item .env.example .env` instead of `cp`.
 
-If you have no Foundry / Databricks credentials configured, the app automatically serves a recorded debate from [`backend/app/dev/fake_debate.json`](backend/app/dev/fake_debate.json).
+Open:
 
-### Run a real debate against live models
+- Frontend: <http://localhost:5173>
+- Backend health: <http://localhost:8000/health>
+- Interactive API docs: <http://localhost:8000/docs>
 
-Set in `.env`:
+To force the credential-free recorded experience, set this value in `.env`
+before starting:
 
+```dotenv
+USE_FAKE_DEBATE=true
 ```
-AZURE_FOUNDRY_PROJECT_CONNECTION_STRING=...
-DATABRICKS_HOST=https://<workspace>.azuredatabricks.net
-DATABRICKS_TOKEN=...
-AZURE_SPEECH_KEY=...
-AZURE_LANGUAGE_ENDPOINT=...
+
+### Option 2: Native development
+
+Start the backend:
+
+```powershell
+Copy-Item .env.example .env
+Set-Location backend
+python -m venv .venv
+.\.venv\Scripts\python -m pip install -r requirements.txt
+.\.venv\Scripts\python -m uvicorn app.main:app --reload --port 8000
 ```
 
-Then probe every wired model in one command:
+In a second terminal, start the frontend:
+
+```powershell
+Set-Location frontend
+npm install
+npm run dev -- --host 0.0.0.0
+```
+
+## Configure live services
+
+Local development reads `.env`; Azure App Service reads environment settings
+and Key Vault references. Do not commit a populated `.env`.
+
+| Variable | Purpose |
+| --- | --- |
+| `AZURE_FOUNDRY_PROJECT_ENDPOINT` | Microsoft Foundry project endpoint used with Azure identity. |
+| `AZURE_SEARCH_ENDPOINT` | Azure AI Search endpoint that hosts the Foundry IQ knowledge base. |
+| `AZURE_FOUNDRY_KB_NAME` | Knowledge base name; defaults to `boardroom-iq`. |
+| `DATABRICKS_HOST` | Azure Databricks workspace URL. |
+| `DATABRICKS_TOKEN` | Local token for Databricks development. Use Key Vault references in Azure. |
+| `AZURE_SPEECH_RESOURCE_ID` | Azure Speech resource ID for identity-based authentication. |
+| `AZURE_SPEECH_REGION` | Azure Speech region. |
+| `AZURE_LANGUAGE_ENDPOINT` | Azure AI Language endpoint. |
+| `APPINSIGHTS_CONNECTION_STRING` | Application Insights connection string. |
+| `MODEL_CEO`, `MODEL_CFO`, `MODEL_CMO`, `MODEL_CTO`, `MODEL_LEGAL` | Role assignments in `<provider>:<endpoint>` format. |
+| `VITE_API_BASE`, `VITE_WS_BASE` | Backend HTTP and WebSocket URLs embedded in the frontend build. |
+
+Anthropic models are intentionally supported only through the Databricks
+provider in this project. Do not configure an Anthropic endpoint as a Foundry
+model.
+
+After configuring credentials, verify the backend and model routes:
 
 ```bash
-docker compose exec backend python -m app.agents.model_router probe
+curl --fail http://localhost:8000/health
+cd backend
+python -m app.agents.model_router probe
 ```
-
-You should see five green check-marks — one per role — with first-token latency.
-
----
-
-## Architecture (one paragraph)
-
-A FastAPI backend hosts five `PersonaAgent` instances. Each agent's `model_ref` is
-of the form `<provider>:<endpoint>` (`foundry:gpt-5`, `databricks:claude-sonnet-4-5`,
-…). The model router dispatches to `FoundryProvider` or `DatabricksProvider`. The
-orchestrator (`boardroom.py`) runs Microsoft Agent Framework workflows: turn-taking,
-A2A challenge/support/question messages, and convergence detection. Every factual
-claim is grounded by `foundry_iq_client.retrieve(...)` against an Azure Blob
-container indexed in FoundryIQ. Sentiment from Azure Language drives a server-
-authoritative mood state machine (`cordial → debating → heated → converging →
-resolved`). The frontend is a React 18 + TypeScript + Vite Microsoft Teams-style chat
-shell — scenario channels on the left, a streaming message thread in the center
-(avatars + name/title + provider-coded model chip + citation footnotes + an inline
-decision card on convergence), and a participants rail on the right with inline
-model-swap dropdowns. TTS + visemes from Azure Speech still stream over WebSocket
-(`audio_chunk`/`viseme` events) but the chat UI ignores them; the older 3D R3F
-boardroom is retired (see `.claude/architecture.md` AD-11).
-
-See [`docs/architecture.md`](docs/architecture.md) for diagrams.
-
----
-
-## Folder layout
-
-See [§3 of the plan](.github/FRONTIER_BOARDROOM_PLAN.md#3-folder-structure-mirror-this-exactly).
-
----
 
 ## Deploy to Azure
 
+The repository contains Bicep modules and deployment scripts for the reference
+Azure architecture. Deployment creates or configures App Service, Azure
+Container Registry, Storage, Azure AI Search, Foundry resources, Speech,
+Language, Key Vault, and Application Insights.
+
+### Azure prerequisites
+
+1. An Azure subscription where you can create resources and role assignments.
+2. Azure CLI, Docker, Python 3.12, and Bash (Git Bash or WSL on Windows).
+3. An authenticated Azure CLI session: `az login`.
+4. Required model deployments in Microsoft Foundry.
+5. An Azure Databricks workspace with the required Anthropic serving endpoints.
+6. Permission to use the selected models in your region and tenant.
+
+### 1. Review environment-specific values
+
+Before deploying outside the reference environment, review:
+
+- Model assignments and Foundry endpoint settings in
+  `infrastructure/bicep/appservice.bicep`.
+- Resource names, region, and existing Databricks integration in
+  `infrastructure/bicep/main.bicep`.
+- The knowledge-seeding and model-serving scripts under
+  `infrastructure/scripts/`.
+
+Model availability and naming differ by subscription, so these values cannot be
+made universal.
+
+### 2. Validate and provision infrastructure
+
+From the repository root:
+
 ```bash
-bash infrastructure/scripts/deploy.sh dev
+ENVIRONMENT=dev
+RESOURCE_GROUP="rg-frontier-boardroom-${ENVIRONMENT}"
+
+az group create --name "$RESOURCE_GROUP" --location centralindia
+az deployment group what-if \
+  --resource-group "$RESOURCE_GROUP" \
+  --template-file infrastructure/bicep/main.bicep \
+  --parameters env="$ENVIRONMENT" \
+               adminObjectId="$(az ad signed-in-user show --query id --output tsv)"
+az deployment group create \
+  --resource-group "$RESOURCE_GROUP" \
+  --template-file infrastructure/bicep/main.bicep \
+  --parameters env="$ENVIRONMENT" \
+               adminObjectId="$(az ad signed-in-user show --query id --output tsv)"
 ```
 
-Bicep provisions everything in §13. The script then runs `setup_databricks.py`
-(creates Mosaic AI external-model endpoints for Anthropic), seeds blob,
-builds the FoundryIQ index, pushes images to ACR, and updates both Web Apps.
+### 3. Prepare model and knowledge services
 
----
+Export the values required by the scripts, then run:
 
-## Live demo runbook
+```bash
+python infrastructure/scripts/setup_databricks.py
+python infrastructure/scripts/seed_blob.py
+python infrastructure/scripts/build_foundry_iq.py
+```
 
-[`docs/demo-runbook.md`](docs/demo-runbook.md) — exact stage script.
-The **model-swap moment** (CFO `databricks:claude-sonnet-4-5` → `foundry:gpt-5`,
-mid-debate, no code change) is the keynote payoff.
+These scripts use your current Azure identity and environment variables. Keep
+tokens and external provider credentials in your shell or Key Vault, never in
+source control.
 
----
+### 4. Build and publish the containers
+
+The frontend API URLs are Vite build-time values and must be supplied while the
+image is built.
+
+```bash
+ACR_LOGIN_SERVER="<your-acr>.azurecr.io"
+BACKEND_URL="https://app-frontier-dev-backend.azurewebsites.net"
+
+az acr login --name "${ACR_LOGIN_SERVER%%.*}"
+
+docker build \
+  --tag "$ACR_LOGIN_SERVER/frontier-backend:latest" \
+  backend
+docker build \
+  --build-arg VITE_API_BASE="$BACKEND_URL" \
+  --build-arg VITE_WS_BASE="${BACKEND_URL/https:/wss:}" \
+  --tag "$ACR_LOGIN_SERVER/frontier-frontend:latest" \
+  frontend
+
+docker push "$ACR_LOGIN_SERVER/frontier-backend:latest"
+docker push "$ACR_LOGIN_SERVER/frontier-frontend:latest"
+```
+
+Restart both web apps after publishing:
+
+```bash
+az webapp restart --resource-group "$RESOURCE_GROUP" \
+  --name "app-frontier-${ENVIRONMENT}-backend"
+az webapp restart --resource-group "$RESOURCE_GROUP" \
+  --name "app-frontier-${ENVIRONMENT}-frontend"
+```
+
+### 5. Verify the deployment
+
+```bash
+curl --fail "https://app-frontier-dev-backend.azurewebsites.net/health"
+curl --fail "https://app-frontier-dev-backend.azurewebsites.net/dev/router-probe"
+```
+
+The health endpoint should return `status: ok`. The router probe reports each
+seat separately, making missing model permissions or endpoint configuration easy
+to identify.
+
+## API overview
+
+| Interface | Purpose |
+| --- | --- |
+| `POST /api/v1/session` | Create a boardroom session. |
+| `POST /api/v1/debate` | Start a debate for a session. |
+| `WS /ws/debate/{session_id}` | Stream debate events. |
+| `POST /api/v1/prep-session` | Create a one-to-one prep session. |
+| `WS /ws/prep/{session_id}` | Stream prep and delegation events. |
+| `POST /api/v1/agent/{role}/swap-model` | Change a role's model assignment. |
+| `POST /api/v1/audience-question` | Submit a question from an audience device. |
+| `GET /health` | Check service health and active role assignments. |
+
+Open `/docs` on a running backend for the complete OpenAPI reference.
+
+## Repository layout
+
+```text
+backend/                 FastAPI API, agents, providers, grounding, and orchestration
+frontend/                React application and WebSocket state
+infrastructure/bicep/    Azure infrastructure modules
+infrastructure/scripts/  Provisioning, seeding, and deployment utilities
+backend/data/sample_seed Fictional knowledge base used by the demo
+docs/                    Demo and project documentation
+```
+
+## Development checks
+
+```bash
+# Backend
+cd backend
+ruff check app
+mypy app
+pytest -q
+
+# Frontend
+cd frontend
+npm run build
+npm run test
+```
+
+## Security and responsible use
+
+- Treat agent output as decision support, not an authoritative business,
+  financial, or legal decision.
+- Use managed identity in Azure and keep local credentials in `.env`.
+- Review uploaded knowledge for privacy, copyright, and data-governance
+  requirements.
+- Restrict model and search access with least-privilege Azure RBAC.
+- Preserve citations in downstream experiences so users can inspect sources.
+
+## Contributing
+
+Issues and pull requests are welcome. Keep changes focused, preserve the
+provider boundary in the model router, route all retrieval through the shared
+Foundry IQ client, and add validation for behavior changes.
 
 ## License
 
-MIT.
+Licensed under the [MIT License](LICENSE).
