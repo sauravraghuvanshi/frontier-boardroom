@@ -1,4 +1,21 @@
-# Frontier Boardroom — Infrastructure
+# Frontier Boardroom - Infrastructure
+
+Production application releases are automated:
+
+1. A push to `master` runs `.github/workflows/ci.yml`.
+2. Successful push CI triggers `.github/workflows/deploy-app.yml`.
+3. ACR builds immutable backend and frontend images tagged with the tested commit SHA.
+4. The workflow confirms the SHA is still the tip of `master` before building and
+   again before changing production.
+5. App Service is pinned to those SHA-tagged images and the workflow verifies
+   health and protected-route behavior.
+
+Fork pull requests cannot enter the production OIDC job. Manual deployment remains
+available through `workflow_dispatch`.
+
+## Full infrastructure provisioning
+
+Use the full provisioning path only for creating or changing Azure resources:
 
 ```bash
 az group create -n rg-frontier-boardroom-dev -l centralindia
@@ -9,14 +26,62 @@ az deployment group create -g rg-frontier-boardroom-dev -f bicep/main.bicep \
   -p anthropicApiKey=$ANTHROPIC_API_KEY
 ```
 
-Then run, in order:
+The one-shot script performs the remaining setup in order:
 
 ```bash
-python scripts/setup_databricks.py
-python scripts/seed_blob.py
-python scripts/build_foundry_iq.py
 bash scripts/deploy.sh dev
 ```
 
-`deploy.sh` is idempotent — re-running it just updates app images and re-seeds
-if `data-version.txt` changed.
+`setup_databricks.py` writes the Databricks host and token through Azure Resource
+Manager. This is intentional: Key Vault public access is disabled, so a
+GitHub-hosted runner cannot use the vault's public data-plane endpoint.
+
+## Production security model
+
+- GitHub authenticates to Azure with OIDC; no Azure client secret is stored.
+- App Service reads the Databricks token through a Key Vault reference.
+- Key Vault public access is disabled and the backend reaches it through VNet
+  integration and a private endpoint.
+- Production images use immutable commit SHA tags.
+- Anonymous paid-model operations have per-client/global quotas and concurrency
+  caps.
+- Provider probes and model swapping are unavailable publicly.
+
+Never place model credentials in Bicep parameter files, workflow YAML, App Service
+plain-text settings, documentation, or command output.
+
+## Session record - 2026-08-09/10
+
+Completed:
+
+- Audited tracked files, Git history, unreachable objects, and GitHub secret
+  scanning; no exposed credential was found.
+- Rotated and validated the Databricks credential for Claude Sonnet and Claude
+  Opus, then stored it in Key Vault.
+- Added private Key Vault connectivity for the backend.
+- Added public-demo quotas, concurrency controls, session ownership, and
+  administrator-only sensitive routes with focused tests.
+- Added GitHub OIDC CI/CD from `master` to App Service with fork and stale-release
+  protections.
+- Repaired clean-runner Python and frontend build issues.
+- Verified automatic CI and deployment for commit `8bb8357`.
+- Verified live health, protected routes, immutable images, and complete cited
+  CFO/Sonnet and Legal/Opus WebSocket responses.
+
+Key learnings:
+
+- Key Vault trusted-service bypass does not provide App Service access in this
+  topology; private endpoint plus VNet integration is required.
+- Secret rotation from a hosted runner must use an allowed management-plane
+  mechanism when the vault data plane is private.
+- A `workflow_run` deployment must validate the source event and repository, not
+  only the workflow conclusion.
+- Check release freshness both before a long image build and immediately before
+  production mutation.
+- Invoke pytest as `python -m pytest` so imports behave consistently on clean
+  Linux runners.
+- Local container tooling is not required for authoritative validation when ACR
+  no-push builds are available.
+- The Bicep template declares an S1 App Service plan. Live validation on
+  2026-08-10 reported B1, so this configuration drift should be reconciled during
+  the next full infrastructure deployment.
