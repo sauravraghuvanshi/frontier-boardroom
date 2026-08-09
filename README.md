@@ -200,6 +200,23 @@ Azure architecture. Deployment creates or configures App Service, Azure
 Container Registry, Storage, Azure AI Search, Foundry resources, Speech,
 Language, Key Vault, and Application Insights.
 
+### Automatic production deployment
+
+Every push to `master` runs the backend and frontend checks in
+`.github/workflows/ci.yml`. When CI succeeds, GitHub automatically starts
+`.github/workflows/deploy-app.yml`, which:
+
+1. Authenticates to Azure with GitHub OIDC (no client secret).
+2. Builds immutable backend and frontend images in ACR using the commit SHA.
+3. Applies the public-demo safety limits.
+4. Pins both App Services to the new images and restarts them.
+5. Verifies health and confirms administrative endpoints remain protected.
+
+The workflow uses the GitHub `prod` environment and requires
+`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID` environment
+secrets. These are non-secret identifiers for the federated deployment identity;
+runtime model credentials remain in Azure Key Vault.
+
 ### Azure prerequisites
 
 1. An Azure subscription where you can create resources and role assignments.

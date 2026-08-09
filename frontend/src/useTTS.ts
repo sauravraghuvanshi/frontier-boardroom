@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { useStore } from "../store";
+import { useStore } from "./store";
 
 /** useTTS — plays incoming base64 mp3 chunks from audio_chunk events.
  *  visemes already drive mouth in Characters.tsx via the speakingAgent flag. */

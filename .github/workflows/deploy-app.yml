@@ -1,6 +1,13 @@
 name: Deploy application containers
 
 on:
+  workflow_run:
+    workflows:
+      - ci
+    types:
+      - completed
+    branches:
+      - master
   workflow_dispatch:
     inputs:
       environment:
@@ -13,7 +20,7 @@ on:
           - prod
 
 concurrency:
-  group: deploy-app-${{ inputs.environment }}
+  group: deploy-app-${{ github.event_name == 'workflow_run' && 'prod' || inputs.environment }}
   cancel-in-progress: false
 
 permissions:
@@ -22,15 +29,40 @@ permissions:
 
 jobs:
   deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository
+      )
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: ${{ github.event_name == 'workflow_run' && 'prod' || inputs.environment }}
     env:
-      ENVIRONMENT: ${{ inputs.environment }}
-      RESOURCE_GROUP: rg-frontier-boardroom-${{ inputs.environment }}
-      BACKEND_APP: app-frontier-${{ inputs.environment }}-backend
-      FRONTEND_APP: app-frontier-${{ inputs.environment }}-frontend
+      ENVIRONMENT: ${{ github.event_name == 'workflow_run' && 'prod' || inputs.environment }}
+      RESOURCE_GROUP: rg-frontier-boardroom-${{ github.event_name == 'workflow_run' && 'prod' || inputs.environment }}
+      BACKEND_APP: app-frontier-${{ github.event_name == 'workflow_run' && 'prod' || inputs.environment }}-backend
+      FRONTEND_APP: app-frontier-${{ github.event_name == 'workflow_run' && 'prod' || inputs.environment }}-frontend
+      DEPLOY_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Reject stale automatic releases
+        if: github.event_name == 'workflow_run'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          current_master="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/commits/master" \
+            --jq '.sha')"
+          if [[ "$DEPLOY_SHA" != "$current_master" ]]; then
+            echo "Refusing stale deployment: $DEPLOY_SHA is not current master" >&2
+            exit 1
+          fi
 
       - uses: azure/login@v2
         with:
@@ -65,14 +97,29 @@ jobs:
           set -euo pipefail
           az acr build \
             --registry "$REGISTRY_NAME" \
-            --image "frontier-backend:${GITHUB_SHA}" \
+            --image "frontier-backend:${DEPLOY_SHA}" \
             backend
           az acr build \
             --registry "$REGISTRY_NAME" \
-            --image "frontier-frontend:${GITHUB_SHA}" \
+            --image "frontier-frontend:${DEPLOY_SHA}" \
             --build-arg "VITE_API_BASE=${BACKEND_URL}" \
             --build-arg "VITE_WS_BASE=${BACKEND_URL/https:/wss:}" \
             frontend
+
+      - name: Recheck current master before deployment
+        if: github.event_name == 'workflow_run'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          current_master="$(gh api \
+            "repos/${GITHUB_REPOSITORY}/commits/master" \
+            --jq '.sha')"
+          if [[ "$DEPLOY_SHA" != "$current_master" ]]; then
+            echo "Master advanced during build; refusing stale deployment" >&2
+            exit 1
+          fi
 
       - name: Apply public-demo safety settings
         shell: bash
@@ -103,13 +150,13 @@ jobs:
           az webapp config container set \
             --resource-group "$RESOURCE_GROUP" \
             --name "$BACKEND_APP" \
-            --container-image-name "${LOGIN_SERVER}/frontier-backend:${GITHUB_SHA}" \
+            --container-image-name "${LOGIN_SERVER}/frontier-backend:${DEPLOY_SHA}" \
             --container-registry-url "https://${LOGIN_SERVER}" \
             --output none
           az webapp config container set \
             --resource-group "$RESOURCE_GROUP" \
             --name "$FRONTEND_APP" \
-            --container-image-name "${LOGIN_SERVER}/frontier-frontend:${GITHUB_SHA}" \
+            --container-image-name "${LOGIN_SERVER}/frontier-frontend:${DEPLOY_SHA}" \
             --container-registry-url "https://${LOGIN_SERVER}" \
             --output none
           az webapp restart --resource-group "$RESOURCE_GROUP" --name "$BACKEND_APP"

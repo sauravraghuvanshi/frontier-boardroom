@@ -10,6 +10,7 @@ param languageEndpoint string
 param searchEndpoint string = ''
 param searchIndexName string = 'boardroom-knowledge-idx'
 param foundryKbName string = 'boardroom-iq'
+param backendSubnetId string
 
 resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: 'plan-${prefix}'
@@ -26,9 +27,11 @@ resource backend 'Microsoft.Web/sites@2023-12-01' = {
   properties: {
     serverFarmId: plan.id
     httpsOnly: true
+    virtualNetworkSubnetId: backendSubnetId
     siteConfig: {
       linuxFxVersion: 'DOCKER|${acrLoginServer}/frontier-backend:latest'
       acrUseManagedIdentityCreds: true
+      vnetRouteAllEnabled: true
       appSettings: [
         { name: 'WEBSITES_PORT', value: '8000' }
         { name: 'APPINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
