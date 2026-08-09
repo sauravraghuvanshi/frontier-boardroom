@@ -20,7 +20,7 @@ jobs:
       - run: ruff check app/public_demo_guard.py tests
       - run: mypy app || true   # TODO(plan): tighten once SDK stubs stable
       - run: python -m compileall -q app tests
-      - run: pytest -q
+      - run: python -m pytest -q
 
   frontend:
     runs-on: ubuntu-latest
