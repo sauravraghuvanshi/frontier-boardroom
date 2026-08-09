@@ -51,6 +51,17 @@ class Settings(BaseSettings):
 
     # Demo safety
     use_fake_debate: bool = Field(default=False)
+    public_demo_limits_enabled: bool = True
+    public_sessions_per_client_hour: int = Field(default=10, ge=1)
+    public_sessions_global_hour: int = Field(default=100, ge=1)
+    public_debates_per_client_hour: int = Field(default=3, ge=1)
+    public_debates_global_hour: int = Field(default=20, ge=1)
+    public_prep_turns_per_client_hour: int = Field(default=12, ge=1)
+    public_prep_turns_global_hour: int = Field(default=60, ge=1)
+    public_active_runs_per_client: int = Field(default=1, ge=1)
+    public_active_runs_global: int = Field(default=2, ge=1)
+    trust_forwarded_client_ip: bool = False
+    admin_api_token: str = ""
 
     # CORS / frontend
     cors_origins: str = "http://localhost:5173,http://localhost:3000"

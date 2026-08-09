@@ -63,7 +63,7 @@ Frontier Boardroom is useful as:
 3. Open citations to inspect the evidence behind an argument.
 4. Follow the server-controlled mood as the discussion moves from cordial to
    resolved.
-5. Swap an agent's model during the session to compare providers.
+5. Compare model assignments across the five specialist roles.
 6. Review the final decision and each executive's vote.
 7. Switch to Prep mode for a private coaching or pressure-testing session.
 
@@ -173,11 +173,17 @@ and Key Vault references. Do not commit a populated `.env`.
 | `AZURE_LANGUAGE_ENDPOINT` | Azure AI Language endpoint. |
 | `APPINSIGHTS_CONNECTION_STRING` | Application Insights connection string. |
 | `MODEL_CEO`, `MODEL_CFO`, `MODEL_CMO`, `MODEL_CTO`, `MODEL_LEGAL` | Role assignments in `<provider>:<endpoint>` format. |
+| `PUBLIC_*` | Per-client and global anonymous usage and concurrency limits. Keep these enabled for public deployments. |
+| `ADMIN_API_TOKEN` | Secret required for model swaps and provider probes. Store it in Key Vault in Azure. |
 | `VITE_API_BASE`, `VITE_WS_BASE` | Backend HTTP and WebSocket URLs embedded in the frontend build. |
 
 Anthropic models are intentionally supported only through the Databricks
 provider in this project. Do not configure an Anthropic endpoint as a Foundry
 model.
+
+The public UI displays model assignments but cannot change them. Model swaps are
+an operator action through the administrator-protected API so anonymous users
+cannot alter the experience for everyone else.
 
 After configuring credentials, verify the backend and model routes:
 
@@ -292,9 +298,9 @@ curl --fail "https://app-frontier-dev-backend.azurewebsites.net/health"
 curl --fail "https://app-frontier-dev-backend.azurewebsites.net/dev/router-probe"
 ```
 
-The health endpoint should return `status: ok`. The router probe reports each
-seat separately, making missing model permissions or endpoint configuration easy
-to identify.
+The health endpoint should return `status: ok`. The router probe is an
+administrator-only endpoint; pass `X-Admin-Token` using a token stored in Key
+Vault when you intentionally run it.
 
 ## API overview
 
@@ -305,9 +311,9 @@ to identify.
 | `WS /ws/debate/{session_id}` | Stream debate events. |
 | `POST /api/v1/prep-session` | Create a one-to-one prep session. |
 | `WS /ws/prep/{session_id}` | Stream prep and delegation events. |
-| `POST /api/v1/agent/{role}/swap-model` | Change a role's model assignment. |
+| `POST /api/v1/agent/{role}/swap-model` | Change a role's model assignment (administrator only). |
 | `POST /api/v1/audience-question` | Submit a question from an audience device. |
-| `GET /health` | Check service health and active role assignments. |
+| `GET /health` | Check service health without exposing model endpoint names. |
 
 Open `/docs` on a running backend for the complete OpenAPI reference.
 
@@ -346,6 +352,14 @@ npm run test
   requirements.
 - Restrict model and search access with least-privilege Azure RBAC.
 - Preserve citations in downstream experiences so users can inspect sources.
+- Keep anonymous per-client and global quotas enabled. The built-in counters are
+  process-local, so multi-instance production deployments should additionally
+  enforce durable quotas at Azure API Management, Front Door, or an equivalent
+  trusted edge.
+- Leave `TRUST_FORWARDED_CLIENT_IP=false` unless direct backend access is blocked
+  and a trusted proxy overwrites the client-IP headers. Trusting caller-supplied
+  forwarding headers lets users evade per-client quotas.
+- Keep `/dev/router-probe` and model swapping behind the administrator token.
 
 ## Contributing
 
