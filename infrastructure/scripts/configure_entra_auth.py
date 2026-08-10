@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 from datetime import UTC, datetime, timedelta
@@ -22,8 +23,11 @@ AUTH_SECRET_NAME = "appservice-auth-client-secret"
 
 
 def _az_json(*args: str) -> Any:
+    executable = shutil.which("az") or shutil.which("az.cmd")
+    if not executable:
+        raise RuntimeError("Azure CLI was not found on PATH.")
     result = subprocess.run(
-        ["az", *args, "--output", "json"],
+        [executable, *args, "--output", "json"],
         check=True,
         capture_output=True,
         text=True,
@@ -54,7 +58,11 @@ class AzureClients:
             json=body,
             timeout=60,
         )
-        response.raise_for_status()
+        if response.is_error:
+            raise RuntimeError(
+                f"Microsoft Graph {method} {path} failed "
+                f"with HTTP {response.status_code}: {response.text}"
+            )
         return response.json() if response.content else {}
 
     def put_secret(
@@ -102,6 +110,10 @@ def ensure_application(
     web = {
         "homePageUrl": frontend_url,
         "logoutUrl": f"{frontend_url}/.auth/logout",
+        "implicitGrantSettings": {
+            "enableAccessTokenIssuance": False,
+            "enableIdTokenIssuance": True,
+        },
         "redirectUris": [
             f"{frontend_url}/.auth/login/aad/callback",
         ],
@@ -138,8 +150,10 @@ def ensure_application(
     return application, created
 
 
-def rotate_secret(clients: AzureClients, application_id: str) -> str:
-    expires = datetime.now(UTC) + timedelta(days=180)
+def rotate_secret(
+    clients: AzureClients, application_id: str, credential_days: int
+) -> str:
+    expires = datetime.now(UTC) + timedelta(days=credential_days)
     result = clients.graph(
         "POST",
         f"/applications/{application_id}/addPassword",
@@ -159,7 +173,13 @@ def main() -> int:
     parser.add_argument(
         "--rotate-secret",
         action="store_true",
-        help="Create a new 180-day credential and replace the Key Vault secret.",
+        help="Create a new credential and replace the Key Vault secret.",
+    )
+    parser.add_argument(
+        "--credential-days",
+        type=int,
+        default=30,
+        help="Credential lifetime. The production tenant currently allows 30 days.",
     )
     args = parser.parse_args()
 
@@ -182,7 +202,11 @@ def main() -> int:
         frontend_url=frontend_url,
     )
     if created or args.rotate_secret:
-        secret = rotate_secret(clients, application["id"])
+        secret = rotate_secret(
+            clients,
+            application["id"],
+            args.credential_days,
+        )
         clients.put_secret(
             subscription_id=subscription_id,
             resource_group=resource_group,

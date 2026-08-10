@@ -12,6 +12,7 @@ from __future__ import annotations
 import os
 import sys
 import time
+import uuid
 
 import httpx
 from azure.identity import DefaultAzureCredential
@@ -151,7 +152,45 @@ def write_kv() -> None:
             timeout=30,
         )
         response.raise_for_status()
+    backend_name = f"app-frontier-{AZURE_RESOURCE_GROUP.removeprefix('rg-frontier-boardroom-')}-backend"
+    backend_response = httpx.get(
+        "https://management.azure.com"
+        f"/subscriptions/{AZURE_SUBSCRIPTION_ID}"
+        f"/resourceGroups/{AZURE_RESOURCE_GROUP}"
+        f"/providers/Microsoft.Web/sites/{backend_name}",
+        params={"api-version": "2023-12-01"},
+        headers=headers,
+        timeout=30,
+    )
+    backend_response.raise_for_status()
+    principal_id = backend_response.json()["identity"]["principalId"]
+    role_definition_id = (
+        f"/subscriptions/{AZURE_SUBSCRIPTION_ID}"
+        "/providers/Microsoft.Authorization/roleDefinitions/"
+        "4633458b-17de-408a-b874-0445c86b69e6"
+    )
+    for secret_name in ("databricks-host", "databricks-token"):
+        scope = f"{base_url}/{secret_name}"
+        assignment_id = uuid.uuid5(
+            uuid.NAMESPACE_URL,
+            f"{scope}|{principal_id}|{role_definition_id}",
+        )
+        role_response = httpx.put(
+            f"{scope}/providers/Microsoft.Authorization/roleAssignments/{assignment_id}",
+            params={"api-version": "2022-04-01"},
+            headers=headers,
+            json={
+                "properties": {
+                    "roleDefinitionId": role_definition_id,
+                    "principalId": principal_id,
+                    "principalType": "ServicePrincipal",
+                }
+            },
+            timeout=30,
+        )
+        role_response.raise_for_status()
     print(f"wrote databricks-host + databricks-token into {KEYVAULT_NAME}")
+    print(f"granted {backend_name} read access at each secret scope")
 
 
 def main() -> int:

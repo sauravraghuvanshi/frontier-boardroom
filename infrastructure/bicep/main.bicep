@@ -29,6 +29,9 @@ param entraClientId string
 @description('Name of the Key Vault secret containing the App Service Authentication client secret')
 param entraClientSecretName string = 'appservice-auth-client-secret'
 
+@description('Set after Databricks runtime secrets exist so access can be assigned at secret scope')
+param runtimeSecretsReady bool = false
+
 var prefix = 'frontier-${env}'
 var storageName = take(toLower(replace('stfrontier${env}${uniqueString(resourceGroup().id)}', '-', '')), 24)
 var acrName = take(toLower('acrfrontier${env}${uniqueString(resourceGroup().id)}'), 50)
@@ -207,10 +210,30 @@ resource languageBackendUser 'Microsoft.Authorization/roleAssignments@2022-04-01
   }
 }
 
-// Backend resolves its runtime Key Vault references.
-resource kvBackendUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: kv
-  name: guid(kv.id, 'app-${prefix}-backend', 'kv-secrets-user')
+resource databricksHostSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' existing = if (runtimeSecretsReady) {
+  parent: kv
+  name: 'databricks-host'
+}
+
+resource databricksTokenSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' existing = if (runtimeSecretsReady) {
+  parent: kv
+  name: 'databricks-token'
+}
+
+// Backend resolves only its two runtime secret references.
+resource kvBackendHostUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (runtimeSecretsReady) {
+  scope: databricksHostSecret
+  name: guid(databricksHostSecret.id, 'app-${prefix}-backend', 'kv-host-secret-user')
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
+    principalId: apps.outputs.backendPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+resource kvBackendTokenUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (runtimeSecretsReady) {
+  scope: databricksTokenSecret
+  name: guid(databricksTokenSecret.id, 'app-${prefix}-backend', 'kv-token-secret-user')
   properties: {
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
     principalId: apps.outputs.backendPrincipalId
