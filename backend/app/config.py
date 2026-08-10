@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     public_active_runs_global: int = Field(default=2, ge=1)
     trust_forwarded_client_ip: bool = False
     admin_api_token: str = ""
+    entra_auth_required: bool = False
 
     # CORS / frontend
     cors_origins: str = "http://localhost:5173,http://localhost:3000"

@@ -20,6 +20,9 @@
   <a href="docs/demo-runbook.md">Demo runbook</a>
 </p>
 
+> The hosted demo requires Microsoft Entra sign-in from the deployment tenant.
+> Local development remains credential-free when `VITE_ENTRA_AUTH_ENABLED=false`.
+
 ---
 
 ## What is Frontier Boardroom?
@@ -211,7 +214,7 @@ and Key Vault references. Do not commit a populated `.env`.
 | `AZURE_LANGUAGE_ENDPOINT` | Azure AI Language endpoint. |
 | `APPINSIGHTS_CONNECTION_STRING` | Application Insights connection string. |
 | `MODEL_CEO`, `MODEL_CFO`, `MODEL_CMO`, `MODEL_CTO`, `MODEL_LEGAL` | Role assignments in `<provider>:<endpoint>` format. |
-| `PUBLIC_*` | Per-client and global anonymous usage and concurrency limits. Keep these enabled for public deployments. |
+| `PUBLIC_*` | Per-client and global usage and concurrency limits retained as defense in depth. |
 | `ADMIN_API_TOKEN` | Secret required for model swaps and provider probes. Store it in Key Vault in Azure. |
 | `VITE_API_BASE`, `VITE_WS_BASE` | Backend HTTP and WebSocket URLs embedded in the frontend build. |
 
@@ -219,9 +222,8 @@ Anthropic models are intentionally supported only through the Databricks
 provider in this project. Do not configure an Anthropic endpoint as a Foundry
 model.
 
-The public UI displays model assignments but cannot change them. Model swaps are
-an operator action through the administrator-protected API so anonymous users
-cannot alter the experience for everyone else.
+The UI displays model assignments but cannot change them. Model swaps are an
+operator action through the administrator-protected API.
 
 After configuring credentials, verify the backend and model routes:
 
@@ -291,12 +293,16 @@ az deployment group what-if \
   --resource-group "$RESOURCE_GROUP" \
   --template-file infrastructure/bicep/main.bicep \
   --parameters env="$ENVIRONMENT" \
-               adminObjectId="$(az ad signed-in-user show --query id --output tsv)"
+               adminObjectId="$(az ad signed-in-user show --query id --output tsv)" \
+               enableEntraAuth=false \
+               entraClientId=""
 az deployment group create \
   --resource-group "$RESOURCE_GROUP" \
   --template-file infrastructure/bicep/main.bicep \
   --parameters env="$ENVIRONMENT" \
-               adminObjectId="$(az ad signed-in-user show --query id --output tsv)"
+               adminObjectId="$(az ad signed-in-user show --query id --output tsv)" \
+               enableEntraAuth=false \
+               entraClientId=""
 ```
 
 ### 3. Prepare model and knowledge services
@@ -407,7 +413,9 @@ npm run test
   requirements.
 - Restrict model and search access with least-privilege Azure RBAC.
 - Preserve citations in downstream experiences so users can inspect sources.
-- Keep anonymous per-client and global quotas enabled. The built-in counters are
+- Require tenant-bound Entra sign-in on both App Services and keep HTTPS-only,
+  TLS 1.2 or newer, and FTP/FTPS publishing disabled.
+- Keep per-client and global quotas enabled. The built-in counters are
   process-local, so multi-instance production deployments should additionally
   enforce durable quotas at Azure API Management, Front Door, or an equivalent
   trusted edge.

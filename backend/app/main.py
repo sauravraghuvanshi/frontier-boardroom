@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .api import (
     routes_audience,
+    routes_auth,
     routes_debate,
     routes_prep,
     routes_session,
@@ -18,6 +19,7 @@ from .api import (
     ws_prep,
     ws_stream,
 )
+from .auth import EntraPrincipalMiddleware
 from .config import get_settings
 from .public_demo_guard import require_admin
 from .telemetry import configure_telemetry, get_logger
@@ -52,8 +54,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(EntraPrincipalMiddleware, required=settings.entra_auth_required)
 
 app.include_router(routes_session.router, prefix="/api/v1")
+app.include_router(routes_auth.router, prefix="/api/v1")
 app.include_router(routes_debate.router, prefix="/api/v1")
 app.include_router(routes_prep.router, prefix="/api/v1")
 app.include_router(routes_swap.router, prefix="/api/v1")

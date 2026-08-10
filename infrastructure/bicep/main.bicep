@@ -20,6 +20,15 @@ param adminObjectId string
 @secure()
 param anthropicApiKey string = ''
 
+@description('Enable tenant-bound App Service Authentication on both web apps')
+param enableEntraAuth bool
+
+@description('Client ID of the single-tenant Entra app registration used by App Service Authentication')
+param entraClientId string
+
+@description('Name of the Key Vault secret containing the App Service Authentication client secret')
+param entraClientSecretName string = 'appservice-auth-client-secret'
+
 var prefix = 'frontier-${env}'
 var storageName = take(toLower(replace('stfrontier${env}${uniqueString(resourceGroup().id)}', '-', '')), 24)
 var acrName = take(toLower('acrfrontier${env}${uniqueString(resourceGroup().id)}'), 50)
@@ -153,6 +162,21 @@ module apps 'appservice.bicep' = {
     searchIndexName: 'boardroom-knowledge-idx'
     foundryKbName: 'boardroom-iq'
     backendSubnetId: network.outputs.appServiceSubnetId
+    enableEntraAuth: enableEntraAuth
+    entraClientId: entraClientId
+    entraTenantId: subscription().tenantId
+    entraClientSecretName: entraClientSecretName
+  }
+}
+
+module appServicePrivateEndpoint 'appservice-private-endpoint.bicep' = if (enableEntraAuth) {
+  name: 'appServicePrivateEndpoint'
+  params: {
+    prefix: prefix
+    location: location
+    backendId: apps.outputs.backendId
+    privateEndpointSubnetId: network.outputs.privateEndpointSubnetId
+    vnetId: network.outputs.vnetId
   }
 }
 
@@ -183,7 +207,7 @@ resource languageBackendUser 'Microsoft.Authorization/roleAssignments@2022-04-01
   }
 }
 
-// Grant both apps Key Vault Secrets User
+// Backend resolves its runtime Key Vault references.
 resource kvBackendUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: kv
   name: guid(kv.id, 'app-${prefix}-backend', 'kv-secrets-user')
@@ -194,14 +218,29 @@ resource kvBackendUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   }
 }
 
-// Grant backend Storage Blob Data Reader
-resource storageBackendReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: resourceGroup()
-  name: guid(resourceGroup().id, storageName, 'app-${prefix}-backend', 'storage-blob-reader')
+resource entraAuthSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' existing = if (enableEntraAuth) {
+  parent: kv
+  name: entraClientSecretName
+}
+
+// Frontend can resolve only the Easy Auth secret, not model credentials.
+resource kvFrontendAuthSecretUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (enableEntraAuth) {
+  scope: entraAuthSecret
+  name: guid(entraAuthSecret.id, 'app-${prefix}-frontend', 'kv-auth-secret-user')
   properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1')
-    principalId: apps.outputs.backendPrincipalId
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')
+    principalId: apps.outputs.frontendPrincipalId
     principalType: 'ServicePrincipal'
+  }
+}
+
+// Storage data roles are scoped to the storage account, never the resource group.
+module storageBackendReader 'storage-role.bicep' = {
+  name: 'storageBackendReader'
+  params: {
+    storageName: storage.outputs.name
+    principalId: apps.outputs.backendPrincipalId
+    roleKey: 'backend-blob-reader'
   }
 }
 
@@ -239,14 +278,13 @@ module searchBackendReader 'aisearch-role.bicep' = {
   }
 }
 
-// AI Search service MI: read blob source for indexer
-resource searchBlobReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  scope: resourceGroup()
-  name: guid(resourceGroup().id, 'search-svc', 'storage-blob-reader')
-  properties: {
-    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '2a2b9908-6ea1-4ae2-8e65-a410df84e7d1')
+// AI Search service MI: read blob source for indexer.
+module searchBlobReader 'storage-role.bicep' = {
+  name: 'searchBlobReader'
+  params: {
+    storageName: storage.outputs.name
     principalId: search.outputs.searchPrincipalId
-    principalType: 'ServicePrincipal'
+    roleKey: 'search-blob-reader'
   }
 }
 
@@ -255,6 +293,23 @@ resource searchBlobReader 'Microsoft.Authorization/roleAssignments@2022-04-01' =
 resource foundryAccount 'Microsoft.CognitiveServices/accounts@2024-10-01' existing = {
   name: 'aif-${prefix}-foundry'
 }
+
+resource foundryProject 'Microsoft.CognitiveServices/accounts/projects@2025-06-01' existing = {
+  parent: foundryAccount
+  name: 'proj-aif-${prefix}'
+}
+
+// Runtime can use existing agents and raw model deployments, but cannot manage the project.
+resource backendFoundryUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  scope: foundryProject
+  name: guid(foundryProject.id, 'app-${prefix}-backend', 'foundry-user')
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '53ca6127-db72-4b80-b1b0-d745d6d5456d')
+    principalId: apps.outputs.backendPrincipalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 resource searchOpenAIUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   scope: foundryAccount
   name: guid(foundryAccount.id, 'search-svc', 'aoai-user')
