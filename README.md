@@ -9,6 +9,10 @@
 <p align="center">
   <a href="https://app-frontier-prod-frontend.azurewebsites.net">Live demo</a>
   ·
+  <a href="#demo-walkthrough">Watch demo</a>
+  ·
+  <a href="#application-screenshots">Screenshots</a>
+  ·
   <a href="#run-locally">Run locally</a>
   ·
   <a href="#deploy-to-azure">Deploy to Azure</a>
@@ -66,6 +70,47 @@ Frontier Boardroom is useful as:
 5. Compare model assignments across the five specialist roles.
 6. Review the final decision and each executive's vote.
 7. Switch to Prep mode for a private coaching or pressure-testing session.
+
+## Demo walkthrough
+
+Watch the full Frontier Boardroom walkthrough, including executive prep,
+grounded citations, and cross-agent delegation.
+
+<p align="center">
+  <a href="https://github.com/sauravraghuvanshi/frontier-boardroom/releases/download/v1.0-demo/Board.Room.Demo.mp4">
+    <img src="docs/images/grounded-executive-prep.png" alt="Watch the Frontier Boardroom demo walkthrough" width="100%" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/sauravraghuvanshi/frontier-boardroom/releases/download/v1.0-demo/Board.Room.Demo.mp4"><strong>▶ Watch the full demo video</strong></a>
+  ·
+  <a href="https://github.com/sauravraghuvanshi/frontier-boardroom/releases/tag/v1.0-demo">Open the demo release</a>
+</p>
+
+## Application screenshots
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/images/boardroom-overview.png" alt="Frontier Boardroom scenario selection and executive roster" />
+    </td>
+    <td width="50%">
+      <img src="docs/images/live-grounded-debate.png" alt="Live executive debate kickoff" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><strong>Boardroom overview</strong><br />Choose a strategic scenario or ask the board a custom question.</td>
+    <td align="center"><strong>Live debate kickoff</strong><br />Follow the selected scenario, board mood, and model assignments as the agents convene.</td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/images/grounded-executive-prep.png" alt="Grounded one-to-one executive preparation with cross-agent delegation" width="100%" />
+  <br />
+  <strong>Grounded Executive Prep</strong><br />
+  Coach or pressure-test an argument, inspect its sources, and delegate a question to another executive with an @mention.
+</p>
 
 ## Architecture
 
