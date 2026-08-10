@@ -166,6 +166,11 @@ jobs:
             --container-registry-url "https://${LOGIN_SERVER}" \
             --output none
           az webapp restart --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_APP"
+          # Container replacement starts its own recycle. A delayed second
+          # recycle is required for the proxy process to bind VNet DNS after
+          # the replacement instance is fully initialized.
+          sleep 60
+          az webapp restart --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_APP"
 
       - name: Verify production safety behavior
         shell: bash

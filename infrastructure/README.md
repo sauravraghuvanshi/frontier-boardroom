@@ -47,6 +47,9 @@ GitHub-hosted runner cannot use the vault's public data-plane endpoint.
   resolution remains stable across container restarts.
 - Releases recycle the backend first and delay the frontend restart so the
   private proxy never initializes against a backend that is still restarting.
+- Frontend container replacement is followed by a delayed second recycle; this
+  sequence is verified against production because image replacement starts its
+  own overlapping App Service recycle.
 - Backend public network access is disabled, and the backend also rejects
   proxied requests that lack the Easy Auth principal header.
 - HTTPS-only is enabled, TLS 1.2 is the minimum, HTTP/2 is enabled, and FTP/FTPS
