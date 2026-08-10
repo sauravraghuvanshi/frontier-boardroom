@@ -185,7 +185,7 @@ jobs:
           fi
 
           for attempt in {1..18}; do
-            if health="$(curl --fail --silent --show-error "$health_url")"; then
+            if health="$(curl --fail --silent --show-error --max-time 30 "$health_url")"; then
               break
             fi
             if [[ "$attempt" == 18 ]]; then

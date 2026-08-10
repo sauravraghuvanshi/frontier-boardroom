@@ -43,6 +43,8 @@ GitHub-hosted runner cannot use the vault's public data-plane endpoint.
 - The production frontend requires single-tenant Microsoft Entra sign-in.
 - Browser API and WebSocket traffic stays on the authenticated frontend origin
   and is reverse-proxied over the VNet to a private backend.
+- The frontend pins App Service's VNet DNS resolver so private backend
+  resolution remains stable across container restarts.
 - Backend public network access is disabled, and the backend also rejects
   proxied requests that lack the Easy Auth principal header.
 - HTTPS-only is enabled, TLS 1.2 is the minimum, HTTP/2 is enabled, and FTP/FTPS
