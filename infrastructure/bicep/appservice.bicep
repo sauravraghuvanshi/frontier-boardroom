@@ -116,6 +116,8 @@ resource frontend 'Microsoft.Web/sites@2023-12-01' = {
           { name: 'VITE_API_BASE', value: frontendUrl }
           { name: 'VITE_WS_BASE', value: replace(frontendUrl, 'https:', 'wss:') }
           { name: 'BACKEND_PROXY_TARGET', value: 'https://app-${prefix}-backend.azurewebsites.net' }
+          { name: 'WEBSITE_DNS_SERVER', value: '168.63.129.16' }
+          { name: 'WEBSITE_VNET_ROUTE_ALL', value: '1' }
         ], frontendAuthSecretSetting)
     }
   }
