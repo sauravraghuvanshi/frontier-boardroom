@@ -7,6 +7,13 @@ set -euo pipefail
 ENV=${1:-dev}
 RG="rg-frontier-boardroom-${ENV}"
 LOC=${LOCATION:-centralindia}
+ENABLE_ENTRA_AUTH=${ENABLE_ENTRA_AUTH:-false}
+ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID:-}
+
+if [[ "$ENABLE_ENTRA_AUTH" == "true" && -z "$ENTRA_CLIENT_ID" ]]; then
+  echo "ENTRA_CLIENT_ID is required when ENABLE_ENTRA_AUTH=true" >&2
+  exit 1
+fi
 
 echo "==> Resource group"
 az group create -n "$RG" -l "$LOC" -o none
@@ -16,6 +23,8 @@ az deployment group what-if -g "$RG" \
   -f infrastructure/bicep/main.bicep \
   -p env="$ENV" \
   -p adminObjectId="$(az ad signed-in-user show --query id -o tsv)" \
+  -p enableEntraAuth="$ENABLE_ENTRA_AUTH" \
+  -p entraClientId="$ENTRA_CLIENT_ID" \
   -p anthropicApiKey="${ANTHROPIC_API_KEY:-}"
 
 echo "==> Bicep deploy"
@@ -23,6 +32,8 @@ DEPLOY_OUT=$(az deployment group create -g "$RG" \
   -f infrastructure/bicep/main.bicep \
   -p env="$ENV" \
   -p adminObjectId="$(az ad signed-in-user show --query id -o tsv)" \
+  -p enableEntraAuth="$ENABLE_ENTRA_AUTH" \
+  -p entraClientId="$ENTRA_CLIENT_ID" \
   -p anthropicApiKey="${ANTHROPIC_API_KEY:-}" \
   -o json)
 
@@ -49,7 +60,12 @@ python infrastructure/scripts/build_foundry_iq.py
 echo "==> Docker images"
 az acr login -n "${ACR%%.*}"
 docker build -t "${ACR}/frontier-backend:latest" backend/
-docker build -t "${ACR}/frontier-frontend:latest" frontend/
+docker build \
+  --build-arg "VITE_API_BASE=${FRONTEND}" \
+  --build-arg "VITE_WS_BASE=${FRONTEND/https:/wss:}" \
+  --build-arg "VITE_ENTRA_AUTH_ENABLED=${ENABLE_ENTRA_AUTH}" \
+  -t "${ACR}/frontier-frontend:latest" \
+  frontend/
 docker push "${ACR}/frontier-backend:latest"
 docker push "${ACR}/frontier-frontend:latest"
 

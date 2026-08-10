@@ -20,9 +20,11 @@ Use the full provisioning path only for creating or changing Azure resources:
 ```bash
 az group create -n rg-frontier-boardroom-dev -l centralindia
 az deployment group what-if -g rg-frontier-boardroom-dev -f bicep/main.bicep \
-  -p env=dev adminObjectId=$(az ad signed-in-user show --query id -o tsv)
+  -p env=dev adminObjectId=$(az ad signed-in-user show --query id -o tsv) \
+  -p enableEntraAuth=false entraClientId=''
 az deployment group create -g rg-frontier-boardroom-dev -f bicep/main.bicep \
   -p env=dev adminObjectId=$(az ad signed-in-user show --query id -o tsv) \
+  -p enableEntraAuth=false entraClientId='' \
   -p anthropicApiKey=$ANTHROPIC_API_KEY
 ```
 
@@ -38,14 +40,54 @@ GitHub-hosted runner cannot use the vault's public data-plane endpoint.
 
 ## Production security model
 
+- The production frontend requires single-tenant Microsoft Entra sign-in.
+- Browser API and WebSocket traffic stays on the authenticated frontend origin
+  and is reverse-proxied over the VNet to a private backend.
+- Backend public network access is disabled, and the backend also rejects
+  proxied requests that lack the Easy Auth principal header.
+- HTTPS-only is enabled, TLS 1.2 is the minimum, HTTP/2 is enabled, and FTP/FTPS
+  publishing is disabled.
 - GitHub authenticates to Azure with OIDC; no Azure client secret is stored.
 - App Service reads the Databricks token through a Key Vault reference.
 - Key Vault public access is disabled and the backend reaches it through VNet
   integration and a private endpoint.
 - Production images use immutable commit SHA tags.
-- Anonymous paid-model operations have per-client/global quotas and concurrency
-  caps.
+- Paid-model operations retain per-client/global quotas and concurrency caps as
+  defense in depth after sign-in.
 - Provider probes and model swapping are unavailable publicly.
+- Runtime RBAC is scoped to the individual ACR, Key Vault secret or vault,
+  storage account, Search service, Speech/Language account, and Foundry project.
+
+## Configure production Entra authentication
+
+Create or update the single-tenant app registration and write its generated
+180-day credential directly to the private Key Vault through ARM:
+
+```bash
+python infrastructure/scripts/configure_entra_auth.py \
+  --environment prod \
+  --rotate-secret
+```
+
+The script prints the non-secret `ENTRA_CLIENT_ID`. Use it for the infrastructure
+what-if and deployment:
+
+```bash
+export ENABLE_ENTRA_AUTH=true
+export ENTRA_CLIENT_ID="<application-client-id>"
+
+az deployment group what-if \
+  -g rg-frontier-boardroom-prod \
+  -f infrastructure/bicep/main.bicep \
+  -p env=prod \
+     adminObjectId="$(az ad signed-in-user show --query id -o tsv)" \
+     enableEntraAuth=true \
+     entraClientId="$ENTRA_CLIENT_ID"
+```
+
+The registration requests no Microsoft Graph permissions. The issuer is pinned
+to the subscription tenant, so tenant members and invited guests can sign in;
+tokens from other tenants are rejected.
 
 Never place model credentials in Bicep parameter files, workflow YAML, App Service
 plain-text settings, documentation, or command output.

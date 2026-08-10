@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { backendFetch } from "./auth";
 
 const API = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 const POLL_MS = 3000;
@@ -14,7 +15,7 @@ export function useAudiencePoll(onQuestion: (q: string, name?: string) => void) 
 
     async function tick() {
       try {
-        const res = await fetch(`${API}/api/v1/audience-question/poll`);
+        const res = await backendFetch(`${API}/api/v1/audience-question/poll`);
         if (!res.ok) return;
         const body = await res.json();
         if (cancelled) return;

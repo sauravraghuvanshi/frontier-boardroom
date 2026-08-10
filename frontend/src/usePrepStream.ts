@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useStore, type Role, type PrepMode } from "./store";
 import { parseMentions } from "./utils/mentionParser";
+import { backendFetch } from "./auth";
 
 const API = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 const WS = import.meta.env.VITE_WS_BASE || "ws://localhost:8000";
@@ -31,7 +32,7 @@ export function usePrepStream() {
       }
       resetPrep();
 
-      const res = await fetch(`${API}/api/v1/prep-session`, {
+      const res = await backendFetch(`${API}/api/v1/prep-session`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -66,11 +67,17 @@ export function usePrepStream() {
   const send = useCallback(
     async (sid: string, text: string, mode: PrepMode) => {
       const { mentions } = parseMentions(text);
-      await fetch(`${API}/api/v1/prep-session/${sid}/message`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text, mode, mentions }),
-      });
+      const response = await backendFetch(
+        `${API}/api/v1/prep-session/${sid}/message`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ text, mode, mentions }),
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`prep message failed: ${response.status}`);
+      }
     },
     [],
   );

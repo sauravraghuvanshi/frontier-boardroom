@@ -10,6 +10,7 @@ import { Logo } from "./branding/Logo";
 import { COMPANY } from "./branding/company";
 import { useAudiencePoll } from "./useAudiencePoll";
 import { useStore } from "./store";
+import { ENTRA_AUTH_ENABLED, signOut } from "./auth";
 
 type View = "boardroom" | "about" | "audience" | "prep";
 
@@ -103,6 +104,15 @@ export default function App() {
             }`}
           />
           {connected ? "Live" : "Idle"}
+          {ENTRA_AUTH_ENABLED && (
+            <button
+              type="button"
+              onClick={signOut}
+              className="ml-2 rounded-md border border-white/10 px-2 py-1 text-white/60 transition hover:border-white/20 hover:text-white"
+            >
+              Sign out
+            </button>
+          )}
         </div>
       </header>
 

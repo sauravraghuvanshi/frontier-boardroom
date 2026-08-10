@@ -93,3 +93,5 @@ resource vaultPrivateDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZone
 }
 
 output appServiceSubnetId string = appServiceSubnet.id
+output privateEndpointSubnetId string = privateEndpointSubnet.id
+output vnetId string = vnet.id

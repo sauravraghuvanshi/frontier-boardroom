@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Logo } from "../branding/Logo";
 import { COMPANY } from "../branding/company";
+import { backendFetch } from "../auth";
 
 const API = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
@@ -18,7 +19,7 @@ export function AudienceQuestionPage() {
     setStatus("sending");
     setErrorMsg(null);
     try {
-      const res = await fetch(`${API}/api/v1/audience-question`, {
+      const res = await backendFetch(`${API}/api/v1/audience-question`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
