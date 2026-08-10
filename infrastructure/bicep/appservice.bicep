@@ -10,6 +10,7 @@ param languageEndpoint string
 param searchEndpoint string = ''
 param searchIndexName string = 'boardroom-knowledge-idx'
 param foundryKbName string = 'boardroom-iq'
+param backendSubnetId string
 
 resource plan 'Microsoft.Web/serverfarms@2023-12-01' = {
   name: 'plan-${prefix}'
@@ -26,9 +27,11 @@ resource backend 'Microsoft.Web/sites@2023-12-01' = {
   properties: {
     serverFarmId: plan.id
     httpsOnly: true
+    virtualNetworkSubnetId: backendSubnetId
     siteConfig: {
       linuxFxVersion: 'DOCKER|${acrLoginServer}/frontier-backend:latest'
       acrUseManagedIdentityCreds: true
+      vnetRouteAllEnabled: true
       appSettings: [
         { name: 'WEBSITES_PORT', value: '8000' }
         { name: 'APPINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
@@ -52,6 +55,16 @@ resource backend 'Microsoft.Web/sites@2023-12-01' = {
         { name: 'MODEL_CMO', value: 'foundry:CMO@1' }
         { name: 'MODEL_CTO', value: 'foundry:CTO@1' }
         { name: 'MODEL_LEGAL', value: 'databricks:databricks-claude-opus-4-6' }
+        { name: 'PUBLIC_DEMO_LIMITS_ENABLED', value: 'true' }
+        { name: 'PUBLIC_SESSIONS_PER_CLIENT_HOUR', value: '10' }
+        { name: 'PUBLIC_SESSIONS_GLOBAL_HOUR', value: '100' }
+        { name: 'PUBLIC_DEBATES_PER_CLIENT_HOUR', value: '3' }
+        { name: 'PUBLIC_DEBATES_GLOBAL_HOUR', value: '20' }
+        { name: 'PUBLIC_PREP_TURNS_PER_CLIENT_HOUR', value: '12' }
+        { name: 'PUBLIC_PREP_TURNS_GLOBAL_HOUR', value: '60' }
+        { name: 'PUBLIC_ACTIVE_RUNS_PER_CLIENT', value: '1' }
+        { name: 'PUBLIC_ACTIVE_RUNS_GLOBAL', value: '2' }
+        { name: 'TRUST_FORWARDED_CLIENT_IP', value: 'false' }
         { name: 'AZURE_SPEECH_RESOURCE_ID', value: speechResourceId }
         { name: 'AZURE_LANGUAGE_ENDPOINT', value: languageEndpoint }
       ]

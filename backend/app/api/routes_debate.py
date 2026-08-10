@@ -6,9 +6,10 @@ import asyncio
 import uuid
 from typing import Dict, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from ..public_demo_guard import client_id, enforce_http_quota
 from .routes_session import get_session
 
 router = APIRouter(tags=["debate"])
@@ -29,9 +30,16 @@ class StartDebateResponse(BaseModel):
 
 
 @router.post("/debate", response_model=StartDebateResponse)
-async def start_debate(req: StartDebateRequest) -> StartDebateResponse:
-    if get_session(req.session_id) is None:
+async def start_debate(req: StartDebateRequest, request: Request) -> StartDebateResponse:
+    session = get_session(req.session_id)
+    if session is None:
         raise HTTPException(status_code=404, detail="session not found")
+    if session["owner"] != client_id(request):
+        raise HTTPException(status_code=404, detail="session not found")
+    if req.session_id in PENDING_DEBATES:
+        raise HTTPException(status_code=409, detail="debate already pending")
+    await enforce_http_quota(request, "debate")
+
     debate_id = uuid.uuid4().hex
     PENDING_DEBATES[req.session_id] = {
         "debate_id": debate_id,

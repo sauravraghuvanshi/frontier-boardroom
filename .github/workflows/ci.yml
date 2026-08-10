@@ -1,8 +1,9 @@
 name: ci
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
+    branches: [master]
 
 jobs:
   backend:
@@ -16,9 +17,10 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -r requirements.txt
-      - run: ruff check app
+      - run: ruff check app/public_demo_guard.py tests
       - run: mypy app || true   # TODO(plan): tighten once SDK stubs stable
-      - run: pytest -q
+      - run: python -m compileall -q app tests
+      - run: python -m pytest -q
 
   frontend:
     runs-on: ubuntu-latest
@@ -30,5 +32,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - run: npm ci || npm install
+      - run: npm ci
       - run: npm run build

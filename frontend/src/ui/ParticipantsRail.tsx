@@ -1,17 +1,8 @@
 import { QRCodeSVG } from "qrcode.react";
 import { useStore, type Role } from "../store";
-import { swapModel } from "../useDebateStream";
 import { getRoleMeta } from "./MessageBubble";
 
 const ROLES: Role[] = ["CEO", "CFO", "CMO", "CTO", "Legal"];
-
-const CHOICES: Record<Role, string[]> = {
-  CEO: ["foundry:CEO@5", "foundry:CEO@2"],
-  CFO: ["databricks:databricks-claude-sonnet-4-6", "databricks:databricks-claude-opus-4-6"],
-  CMO: ["foundry:CMO@3", "foundry:CMO@2", "foundry:CMO@1"],
-  CTO: ["foundry:gpt-4.1", "foundry:CTO@6", "foundry:CTO@3", "foundry:CTO@2", "foundry:CTO@1", "foundry:gpt-5"],
-  Legal: ["databricks:databricks-claude-opus-4-6", "databricks:databricks-claude-sonnet-4-6"],
-};
 
 const FOUNDRY_AGENT_BASE_MODEL: Record<string, string> = {
   "CEO@5": "gpt-5 · RAG",
@@ -39,7 +30,6 @@ function modelLabel(ref: string) {
 export function ParticipantsRail() {
   const speakingAgent = useStore((s) => s.speakingAgent);
   const models = useStore((s) => s.modelByRole);
-  const swap = useStore((s) => s.swapModel);
   const citations = useStore((s) => s.citations);
 
   const audienceUrl =
@@ -97,20 +87,9 @@ export function ParticipantsRail() {
                   <span className="text-[10px] text-emerald-400">speaking</span>
                 )}
               </div>
-              <select
-                className="mt-2 w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white/80 outline-none focus:border-[#7b83eb] font-mono"
-                value={models[role]}
-                onChange={async (e) => {
-                  swap(role, e.target.value);
-                  await swapModel(role, e.target.value);
-                }}
-              >
-                {CHOICES[role].map((c) => (
-                  <option key={c} value={c}>
-                    {modelLabel(c)}
-                  </option>
-                ))}
-              </select>
+              <div className="mt-2 w-full bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white/80 font-mono">
+                {modelLabel(models[role])}
+              </div>
             </div>
           );
         })}

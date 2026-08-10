@@ -1,8 +1,12 @@
 # Demo Runbook — The Frontier Boardroom
 
-Total run time: **~9 minutes**. Practice cues, do not improvise model swaps.
+Total run time: **~9 minutes**. Practice cues and use the configured production
+models; public model swapping is intentionally disabled.
 
-The room is a Teams-style chat: left rail = scenario channels, center = live message stream with mood pill + decision card, right rail = participants with inline model-swap dropdown + citation drawer + audience-question QR. (The 3D scene was retired 2026-05-20 — see AD-11.)
+The room is a Teams-style chat: left rail = scenario channels, center = live
+message stream with mood pill and decision card, right rail = participants,
+citation drawer, and audience-question QR. (The 3D scene was retired 2026-05-20
+- see AD-11.)
 
 ## 0:00 — Cold open (15s)
 - Speaker: *"What if your entire C-suite met for a strategic decision in 90 seconds, with citations on every claim?"*
@@ -12,11 +16,11 @@ The room is a Teams-style chat: left rail = scenario channels, center = live mes
 - CEO (`foundry:CEO@5` — GPT-5 on Foundry) opens. The bubble shows the model chip; citation chips appear inline as the briefing block is grounded.
 - Right rail begins filling the citation drawer in real time.
 
-## 1:30 — CFO presents the numbers (the model-swap moment)
+## 1:30 - CFO presents the numbers (the multi-provider moment)
 - CFO (`databricks:databricks-claude-sonnet-4-6`) gives the SEA pipeline figure and CAC math.
-- **Pause here.** Speaker: *"Notice the chip — CFO is Claude Sonnet 4.6 running on Azure Databricks Mosaic AI. Watch what happens when I swap him to GPT-5 on Foundry mid-debate."*
-- In the **Participants** rail, click CFO → model dropdown → `foundry:CEO@5`. The next CFO turn renders the new chip and a noticeably different voice.
-- Speaker: *"Same boardroom, different brain. The router (`model_router.py`) decides who goes where — never bypassed."*
+- **Pause here.** Speaker: *"Notice the chip - CFO is Claude Sonnet 4.6 running on Azure Databricks Mosaic AI, while the chair runs through Microsoft Foundry."*
+- Speaker: *"Same boardroom, different model providers. The router decides who goes where, while every agent shares the same grounding layer."*
+- Do not expose or enable the administrator-only model-swap route for a public demo.
 
 ## 3:00 — CMO/CTO push back
 - CMO (`foundry:gpt-4o`) brings brand-awareness signals and softened coach/drill framing (L-19).
@@ -43,10 +47,25 @@ The room is a Teams-style chat: left rail = scenario channels, center = live mes
 ## 8:00 — Audience QR
 - Scan the right-rail QR; audience submits a prompt that re-runs the debate at lower fidelity.
 
-## 8:45 — Outro
-- Hot-swap CEO to a different Foundry model to show provider-agnostic chair.
-- Show the Participants rail full model registry.
+## 8:45 - Outro
+- Show the model chips and explain that role-to-model assignments are
+  configuration-driven rather than hardcoded in agent logic.
+- Close on the citation drawer and decision card.
 
 ## Fallback
-- If any provider 5xx's: hit `GET /dev/fake-debate` (or set `USE_FAKE_DEBATE=true`).
-- The fixture replays a recorded SEA debate end-to-end so the demo never goes silent.
+- Before the event, explicitly enable and validate recorded-debate mode in the
+  controlled demo environment.
+- The public production deployment intentionally returns `404` for diagnostic and
+  administrative routes, including `/dev/fake-debate`.
+- Do not change production safety settings live on stage. Keep the validated
+  fallback environment open in a separate browser tab.
+
+## Pre-demo production checks
+
+- Confirm backend `/health` returns `{"status":"ok"}`.
+- Confirm `/dev/router-probe`, `/dev/fake-debate`, and model-swap routes are not
+  publicly accessible.
+- Run one CFO/Sonnet and one Legal/Opus prep turn and confirm each streams a
+  complete response with citations.
+- Confirm the frontend and backend use the same immutable commit SHA.
+- Never paste or display model credentials, Key Vault values, or deployment logs.

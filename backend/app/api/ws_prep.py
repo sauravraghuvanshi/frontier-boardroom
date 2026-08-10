@@ -18,8 +18,9 @@ from typing import Any
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ..orchestrator.prep_delegate import stream_delegate_response
+from ..public_demo_guard import UsageLimitExceeded, client_id, model_run_slot
 from ..telemetry import get_logger
-from .routes_prep import get_prep_queue, get_prep_session
+from .routes_prep import get_prep_owner, get_prep_queue, get_prep_session
 
 router = APIRouter()
 log = get_logger("ws_prep")
@@ -90,23 +91,34 @@ async def ws_prep(ws: WebSocket, sid: str) -> None:
                 break
             msg = get_task.result()
             try:
-                if msg.get("type") == "delegate":
-                    # Route delegation directly to stream_delegate_response
-                    await stream_delegate_response(
-                        from_role=msg["from_role"],
-                        to_role=msg["to_role"],
-                        question=msg["question"],
-                        emit=emit,
-                    )
-                else:
-                    # Normal message: route to session.handle_turn()
-                    await session.handle_turn(
-                        user_text=msg["text"],
-                        mode=msg["mode"],
-                        simulate_role=msg.get("simulate_role"),
-                        mentions=msg.get("mentions", []),
-                        emit=emit,
-                    )
+                owner = get_prep_owner(sid)
+                if owner is None or owner != client_id(ws):
+                    await emit({"type": "error", "message": "unknown prep session"})
+                    break
+                async with model_run_slot(owner):
+                    if msg.get("type") == "delegate":
+                        # Route delegation directly to stream_delegate_response
+                        await stream_delegate_response(
+                            from_role=msg["from_role"],
+                            to_role=msg["to_role"],
+                            question=msg["question"],
+                            emit=emit,
+                        )
+                    else:
+                        # Normal message: route to session.handle_turn()
+                        await session.handle_turn(
+                            user_text=msg["text"],
+                            mode=msg["mode"],
+                            simulate_role=msg.get("simulate_role"),
+                            mentions=msg.get("mentions", []),
+                            emit=emit,
+                        )
+            except UsageLimitExceeded as exc:
+                await emit({
+                    "type": "error",
+                    "message": exc.message,
+                    "retry_after": exc.retry_after,
+                })
             except Exception as e:  # noqa: BLE001
                 log.exception("prep_turn_failed", sid=sid)
                 await emit({"type": "error", "message": str(e)})

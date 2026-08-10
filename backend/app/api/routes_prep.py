@@ -12,19 +12,24 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from time import monotonic
 from typing import Dict, Literal, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ..agents.registry import PREP_REGISTRY
 from ..orchestrator.prep_session import PrepSession
+from ..public_demo_guard import client_id, enforce_http_quota
 
 router = APIRouter(tags=["prep"])
 
 # Process-local prep stores. Production swaps for Redis.
 _PREP_SESSIONS: Dict[str, PrepSession] = {}
 _PREP_QUEUES: Dict[str, asyncio.Queue[dict]] = {}
+_PREP_OWNERS: Dict[str, str] = {}
+_PREP_CREATED_AT: Dict[str, float] = {}
+_SESSION_TTL_SECONDS = 2 * 60 * 60
 
 
 def get_prep_session(sid: str) -> PrepSession | None:
@@ -33,6 +38,10 @@ def get_prep_session(sid: str) -> PrepSession | None:
 
 def get_prep_queue(sid: str) -> asyncio.Queue[dict] | None:
     return _PREP_QUEUES.get(sid)
+
+
+def get_prep_owner(sid: str) -> str | None:
+    return _PREP_OWNERS.get(sid)
 
 
 class CreatePrepSessionRequest(BaseModel):
@@ -50,7 +59,7 @@ class PrepMessageRequest(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
     mode: Literal["coach", "drill", "simulate"]
     simulate_role: Optional[str] = None
-    mentions: Optional[list[str]] = None  # Agent names to delegate to (e.g., ["CTO"])
+    mentions: Optional[list[str]] = Field(default=None, max_length=1)
 
 
 class PrepMessageResponse(BaseModel):
@@ -58,11 +67,26 @@ class PrepMessageResponse(BaseModel):
 
 
 @router.post("/prep-session", response_model=CreatePrepSessionResponse)
-async def create_prep_session(req: CreatePrepSessionRequest) -> CreatePrepSessionResponse:
+async def create_prep_session(
+    req: CreatePrepSessionRequest, request: Request
+) -> CreatePrepSessionResponse:
     if req.role not in PREP_REGISTRY:
         raise HTTPException(
             status_code=400, detail=f"unknown role: {req.role}"
         )
+    owner = await enforce_http_quota(request, "session")
+    now = monotonic()
+    expired = [
+        sid
+        for sid, created_at in _PREP_CREATED_AT.items()
+        if now - created_at >= _SESSION_TTL_SECONDS
+    ]
+    for expired_sid in expired:
+        _PREP_SESSIONS.pop(expired_sid, None)
+        _PREP_QUEUES.pop(expired_sid, None)
+        _PREP_OWNERS.pop(expired_sid, None)
+        _PREP_CREATED_AT.pop(expired_sid, None)
+
     sid = uuid.uuid4().hex
     _PREP_SESSIONS[sid] = PrepSession(
         role=req.role,
@@ -71,14 +95,20 @@ async def create_prep_session(req: CreatePrepSessionRequest) -> CreatePrepSessio
         sid=sid,
     )
     _PREP_QUEUES[sid] = asyncio.Queue()
+    _PREP_OWNERS[sid] = owner
+    _PREP_CREATED_AT[sid] = now
     return CreatePrepSessionResponse(prep_session_id=sid, role=req.role)
 
 
 @router.post(
     "/prep-session/{sid}/message", response_model=PrepMessageResponse
 )
-async def post_prep_message(sid: str, req: PrepMessageRequest) -> PrepMessageResponse:
+async def post_prep_message(
+    sid: str, req: PrepMessageRequest, request: Request
+) -> PrepMessageResponse:
     if sid not in _PREP_SESSIONS:
+        raise HTTPException(status_code=404, detail="prep session not found")
+    if _PREP_OWNERS.get(sid) != client_id(request):
         raise HTTPException(status_code=404, detail="prep session not found")
     if req.mode == "simulate":
         if not req.simulate_role or req.simulate_role not in PREP_REGISTRY:
@@ -86,6 +116,12 @@ async def post_prep_message(sid: str, req: PrepMessageRequest) -> PrepMessageRes
                 status_code=400,
                 detail="simulate mode requires a valid simulate_role",
             )
+    if req.mentions:
+        if _PREP_SESSIONS[sid].role != "CEO":
+            raise HTTPException(status_code=403, detail="only the CEO can delegate")
+        if any(role not in PREP_REGISTRY or role == "CEO" for role in req.mentions):
+            raise HTTPException(status_code=400, detail="invalid delegation role")
+    await enforce_http_quota(request, "prep_turn")
     queue = _PREP_QUEUES.setdefault(sid, asyncio.Queue())
     await queue.put({
         "text": req.text,

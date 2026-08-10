@@ -34,6 +34,8 @@ DBW_URL=$(echo "$DEPLOY_OUT" | python -c "import sys,json;print(json.load(sys.st
 
 export KEYVAULT_NAME="$KEYVAULT"
 export DATABRICKS_HOST="https://${DBW_URL}"
+export AZURE_RESOURCE_GROUP="$RG"
+export AZURE_SUBSCRIPTION_ID="$(az account show --query id -o tsv)"
 
 echo "==> Databricks Mosaic AI setup"
 python infrastructure/scripts/setup_databricks.py

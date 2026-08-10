@@ -105,6 +105,7 @@ resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
     tenantId: subscription().tenantId
     sku: { family: 'A', name: 'standard' }
     enableRbacAuthorization: true
+    publicNetworkAccess: 'Disabled'
   }
 }
 
@@ -125,6 +126,16 @@ resource anthropicSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!e
   properties: { value: anthropicApiKey }
 }
 
+// ---------- Private networking ----------
+module network 'network.bicep' = {
+  name: 'network'
+  params: {
+    prefix: prefix
+    location: location
+    vaultId: kv.id
+  }
+}
+
 // ---------- App Service plan + 2 apps ----------
 module apps 'appservice.bicep' = {
   name: 'apps'
@@ -141,6 +152,7 @@ module apps 'appservice.bicep' = {
     searchEndpoint: search.outputs.searchEndpoint
     searchIndexName: 'boardroom-knowledge-idx'
     foundryKbName: 'boardroom-iq'
+    backendSubnetId: network.outputs.appServiceSubnetId
   }
 }
 

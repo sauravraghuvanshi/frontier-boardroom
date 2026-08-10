@@ -8,9 +8,10 @@ from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from ..public_demo_guard import UsageLimitExceeded, client_id, model_run_slot
 from ..telemetry import get_logger
 from .routes_debate import DEBATE_EVENTS, PENDING_DEBATES
-from .routes_session import get_session
+from .routes_session import get_session, get_session_owner
 
 router = APIRouter()
 log = get_logger("ws")
@@ -50,12 +51,25 @@ async def ws_debate(ws: WebSocket, session_id: str) -> None:
         except Exception as e:  # noqa: BLE001
             log.warning("ws_send_failed", error=str(e))
 
+    owner = get_session_owner(session_id)
+    if owner is None or owner != client_id(ws):
+        await emit({"type": "error", "message": "unknown session"})
+        await ws.close()
+        return
+
     try:
-        await boardroom.run(
-            question=spec["question"],
-            scenario_id=spec.get("scenario_id"),
-            emit=emit,
-        )
+        async with model_run_slot(owner):
+            await boardroom.run(
+                question=spec["question"],
+                scenario_id=spec.get("scenario_id"),
+                emit=emit,
+            )
+    except UsageLimitExceeded as exc:
+        await emit({
+            "type": "error",
+            "message": exc.message,
+            "retry_after": exc.retry_after,
+        })
     except WebSocketDisconnect:
         log.info("ws_disconnect", session_id=session_id)
     except Exception as e:  # noqa: BLE001

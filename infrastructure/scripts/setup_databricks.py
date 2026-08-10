@@ -15,11 +15,12 @@ import time
 
 import httpx
 from azure.identity import DefaultAzureCredential
-from azure.keyvault.secrets import SecretClient
 
 DATABRICKS_HOST = os.environ["DATABRICKS_HOST"].rstrip("/")
 DATABRICKS_TOKEN = os.environ["DATABRICKS_TOKEN"]
 KEYVAULT_NAME = os.environ["KEYVAULT_NAME"]
+AZURE_SUBSCRIPTION_ID = os.environ["AZURE_SUBSCRIPTION_ID"]
+AZURE_RESOURCE_GROUP = os.environ["AZURE_RESOURCE_GROUP"]
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 SECRET_SCOPE = os.environ.get("DATABRICKS_SECRET_SCOPE", "frontier-boardroom")
 
@@ -41,7 +42,11 @@ def _api(method: str, path: str, json: dict | None = None) -> dict:
 
 def ensure_secret_scope() -> None:
     try:
-        _api("POST", "secrets/scopes/create", {"scope": SECRET_SCOPE, "scope_backend_type": "DATABRICKS"})
+        _api(
+            "POST",
+            "secrets/scopes/create",
+            {"scope": SECRET_SCOPE, "scope_backend_type": "DATABRICKS"},
+        )
         print(f"created secret scope {SECRET_SCOPE}")
     except RuntimeError as e:
         if "already exists" not in str(e).lower():
@@ -69,7 +74,9 @@ def ensure_endpoint(name: str, anthropic_model: str) -> None:
                         "provider": "anthropic",
                         "task": "llm/v1/chat",
                         "anthropic_config": {
-                            "anthropic_api_key": "{{secrets/" + SECRET_SCOPE + "/anthropic-api-key}}",
+                            "anthropic_api_key": (
+                                "{{secrets/" + SECRET_SCOPE + "/anthropic-api-key}}"
+                            ),
                         },
                     },
                 }
@@ -81,7 +88,11 @@ def ensure_endpoint(name: str, anthropic_model: str) -> None:
         print(f"created serving endpoint {name}")
     except RuntimeError as e:
         if "already exists" in str(e).lower() or "RESOURCE_ALREADY_EXISTS" in str(e):
-            _api("PUT", f"serving-endpoints/{name}/config", {"served_entities": body["config"]["served_entities"]})
+            _api(
+                "PUT",
+                f"serving-endpoints/{name}/config",
+                {"served_entities": body["config"]["served_entities"]},
+            )
             print(f"updated serving endpoint {name}")
         else:
             raise
@@ -116,10 +127,30 @@ def smoke_test(name: str) -> None:
 
 
 def write_kv() -> None:
-    kv_url = f"https://{KEYVAULT_NAME}.vault.azure.net"
-    sc = SecretClient(vault_url=kv_url, credential=DefaultAzureCredential())
-    sc.set_secret("databricks-host", DATABRICKS_HOST)
-    sc.set_secret("databricks-token", DATABRICKS_TOKEN)
+    credential = DefaultAzureCredential()
+    token = credential.get_token("https://management.azure.com/.default").token
+    base_url = (
+        "https://management.azure.com"
+        f"/subscriptions/{AZURE_SUBSCRIPTION_ID}"
+        f"/resourceGroups/{AZURE_RESOURCE_GROUP}"
+        f"/providers/Microsoft.KeyVault/vaults/{KEYVAULT_NAME}/secrets"
+    )
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    for name, value in (
+        ("databricks-host", DATABRICKS_HOST),
+        ("databricks-token", DATABRICKS_TOKEN),
+    ):
+        response = httpx.put(
+            f"{base_url}/{name}",
+            params={"api-version": "2023-07-01"},
+            headers=headers,
+            json={"properties": {"value": value}},
+            timeout=30,
+        )
+        response.raise_for_status()
     print(f"wrote databricks-host + databricks-token into {KEYVAULT_NAME}")
 
 
