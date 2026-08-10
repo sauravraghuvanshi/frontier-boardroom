@@ -76,17 +76,10 @@ Frontier Boardroom is useful as:
 Watch the full Frontier Boardroom walkthrough, including executive prep,
 grounded citations, and cross-agent delegation.
 
-<p align="center">
-  <a href="https://github.com/sauravraghuvanshi/frontier-boardroom/releases/download/v1.0-demo/Board.Room.Demo.mp4">
-    <img src="docs/images/grounded-executive-prep.png" alt="Watch the Frontier Boardroom demo walkthrough" width="100%" />
-  </a>
-</p>
+https://github.com/user-attachments/assets/1dd68eb8-5652-46f2-9e8b-ca11ba3d0740
 
-<p align="center">
-  <a href="https://github.com/sauravraghuvanshi/frontier-boardroom/releases/download/v1.0-demo/Board.Room.Demo.mp4"><strong>▶ Watch the full demo video</strong></a>
-  ·
-  <a href="https://github.com/sauravraghuvanshi/frontier-boardroom/releases/tag/v1.0-demo">Open the demo release</a>
-</p>
+For the original full-resolution recording,
+[open the demo release](https://github.com/sauravraghuvanshi/frontier-boardroom/releases/tag/v1.0-demo).
 
 ## Application screenshots
 
