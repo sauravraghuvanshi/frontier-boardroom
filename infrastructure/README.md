@@ -61,7 +61,7 @@ GitHub-hosted runner cannot use the vault's public data-plane endpoint.
 ## Configure production Entra authentication
 
 Create or update the single-tenant app registration and write its generated
-180-day credential directly to the private Key Vault through ARM:
+30-day credential directly to the private Key Vault through ARM:
 
 ```bash
 python infrastructure/scripts/configure_entra_auth.py \
@@ -82,7 +82,8 @@ az deployment group what-if \
   -p env=prod \
      adminObjectId="$(az ad signed-in-user show --query id -o tsv)" \
      enableEntraAuth=true \
-     entraClientId="$ENTRA_CLIENT_ID"
+     entraClientId="$ENTRA_CLIENT_ID" \
+     runtimeSecretsReady=true
 ```
 
 The registration requests no Microsoft Graph permissions. The issuer is pinned

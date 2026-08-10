@@ -201,7 +201,7 @@ jobs:
           if [[ "$auth_enabled" == "true" ]]; then
             frontend_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
               "${FRONTEND_URL}/")"
-            if [[ "$frontend_status" != 302 ]]; then
+            if [[ "$frontend_status" != 302 && "$frontend_status" != 401 ]]; then
               echo "Frontend did not require Entra sign-in (HTTP $frontend_status)" >&2
               exit 1
             fi
