@@ -50,6 +50,9 @@ GitHub-hosted runner cannot use the vault's public data-plane endpoint.
 - Frontend container replacement is followed by a delayed second recycle; this
   sequence is verified against production because image replacement starts its
   own overlapping App Service recycle.
+- Release verification allows an eight-minute bounded warm-up window; the
+  current plan can take slightly over five minutes to restore private proxy
+  health after both containers are replaced.
 - Backend public network access is disabled, and the backend also rejects
   proxied requests that lack the Easy Auth principal header.
 - HTTPS-only is enabled, TLS 1.2 is the minimum, HTTP/2 is enabled, and FTP/FTPS
