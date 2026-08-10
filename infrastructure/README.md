@@ -45,6 +45,8 @@ GitHub-hosted runner cannot use the vault's public data-plane endpoint.
   and is reverse-proxied over the VNet to a private backend.
 - The frontend pins App Service's VNet DNS resolver so private backend
   resolution remains stable across container restarts.
+- Releases recycle the backend first and delay the frontend restart so the
+  private proxy never initializes against a backend that is still restarting.
 - Backend public network access is disabled, and the backend also rejects
   proxied requests that lack the Easy Auth principal header.
 - HTTPS-only is enabled, TLS 1.2 is the minimum, HTTP/2 is enabled, and FTP/FTPS
