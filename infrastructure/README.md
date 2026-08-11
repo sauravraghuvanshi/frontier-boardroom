@@ -50,9 +50,9 @@ GitHub-hosted runner cannot use the vault's public data-plane endpoint.
 - Frontend container replacement is followed by a delayed second recycle; this
   sequence is verified against production because image replacement starts its
   own overlapping App Service recycle.
-- Release verification allows an eight-minute bounded warm-up window; the
-  current plan can take slightly over five minutes to restore private proxy
-  health after both containers are replaced.
+- Production verification allows a bounded 15-minute recovery window. The live
+  B1 plan required about 10 minutes to restore private proxy health during the
+  2026-08-11 release, exceeding the prior eight-minute window.
 - Backend public network access is disabled, and the backend also rejects
   proxied requests that lack the Easy Auth principal header.
 - HTTPS-only is enabled, TLS 1.2 is the minimum, HTTP/2 is enabled, and FTP/FTPS
@@ -138,3 +138,6 @@ Key learnings:
 - The Bicep template declares an S1 App Service plan. Live validation on
   2026-08-10 reported B1, so this configuration drift should be reconciled during
   the next full infrastructure deployment.
+- A subsequent B1 release on 2026-08-11 restored private proxy health about
+  10 minutes after verification began; deployment checks now retain a
+  15-minute hard deadline while the S1 drift remains unresolved.
