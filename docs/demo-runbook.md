@@ -69,3 +69,16 @@ citation drawer, and audience-question QR. (The 3D scene was retired 2026-05-20
   complete response with citations.
 - Confirm the frontend and backend use the same immutable commit SHA.
 - Never paste or display model credentials, Key Vault values, or deployment logs.
+
+### Last verified baseline — 2026-08-11
+
+- Commit `fcb88c1` passed CI and production deployment.
+- Frontend `/health` returned HTTP 200; backend JSON and
+  `x-frontier-build-sha` matched the deployed commit.
+- Frontend and administrator routes returned HTTP 401 for unauthenticated
+  requests; direct backend health returned HTTP 403.
+- Production used the S1 App Service tier and matching immutable frontend and
+  backend image tags.
+
+Treat this as a reference baseline only. Repeat the checks above against the
+current commit before each live demo.

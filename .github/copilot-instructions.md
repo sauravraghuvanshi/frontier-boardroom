@@ -57,9 +57,15 @@ comment with the question rather than guessing.
 
 ## Live deployment
 
-- Frontend: https://app-frontier-dev-frontend.azurewebsites.net
-- Backend:  https://app-frontier-dev-backend.azurewebsites.net (`/health` 200)
-- RG `rg-frontier-boardroom-dev` (subscription details kept out of public docs).
-- See internal `DEPLOYMENT.md` for full resource inventory, rebuild commands, and the
-  list of parked items (Anthropic key, Databricks PAT, Foundry model deployments,
-  Speech/Language keys) needed before live debates work end-to-end.
+- Frontend: https://app-frontier-prod-frontend.azurewebsites.net
+- Backend: https://app-frontier-prod-backend.azurewebsites.net. Public backend
+  access is intentionally disabled; verify health through the frontend `/health`
+  proxy.
+- Resource group: `rg-frontier-boardroom-prod` (subscription details stay out of
+  public documentation).
+- Last verified 2026-08-11: CI and deployment succeeded for commit `fcb88c1`;
+  frontend/backend build SHAs matched, frontend/admin routes required
+  authentication, and direct backend access returned HTTP 403.
+- Releases use GitHub OIDC, immutable SHA tags, target-SHA health checks, and
+  automatic rollback. See `infrastructure/README.md` for the current deployment
+  process, session records, and operational learnings.

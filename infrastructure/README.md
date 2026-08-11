@@ -147,9 +147,47 @@ Key learnings:
   Linux runners.
 - Local container tooling is not required for authoritative validation when ACR
   no-push builds are available.
-- The Bicep template declares an S1 App Service plan, but live validation on
-  2026-08-10 reported B1. Releases now block on that drift before replacing
-  containers; production was reconciled to S1 on 2026-08-11.
-- A subsequent B1 release on 2026-08-11 restored private proxy health about
-  10 minutes after verification began; deployment checks now retain a
-  15-minute hard deadline as defense in depth.
+
+## Session record - 2026-08-11
+
+Completed:
+
+- Merged the bounded warm-up change from PR #8 and traced the subsequent
+  deployment failures instead of continuing to extend timeouts.
+- Reconciled the production App Service plan from the observed B1 drift to the
+  Bicep-declared S1 tier.
+- Correlated GitHub run logs, App Service startup logs, activity logs, VNet
+  integration, private endpoints, and private DNS configuration.
+- Confirmed that `az webapp config container set` generated multiple App Service
+  configuration writes per app, producing staggered recycles and transient VNet
+  attachment failures.
+- Replaced the multi-write update with one immutable `linuxFxVersion` write per
+  app and made infrastructure/safety drift checks read-only during app releases.
+- Added backend and frontend build-SHA evidence, target-SHA readiness checks,
+  automatic restoration of the previous image pair, and rollback identity
+  verification.
+- Required explicit immutable image tags in Bicep and the one-shot deployment
+  script so infrastructure changes cannot silently reset apps to `latest`.
+- Completed four independent deployment/failure-mode reviews and addressed every
+  blocking finding before the final merge.
+- Verified successful CI and production deployment for commit `fcb88c1` in
+  GitHub Actions run `31473000214`.
+- Re-verified production health, matching backend/frontend SHAs, S1 plan state,
+  Entra protection, private backend denial, and protected administrator routes.
+
+Key learnings:
+
+- App Service container convenience commands can perform several control-plane
+  writes; use activity logs to confirm actual mutation count.
+- A site can report a successful start and then be recycled again by a later
+  configuration write. Startup logs reveal this sequence more clearly than
+  external HTTP polling.
+- Readiness must identify the intended build, not merely return HTTP 200.
+- App releases should validate infrastructure drift and fail before mutation;
+  infrastructure repair belongs in a separate maintenance operation.
+- A failed release is not safely rolled back until the previous builds—not just
+  the previous configuration values—are observed serving traffic.
+- HTTP 403 is a valid protected outcome for an unauthenticated administrator
+  route and must not be classified as public access.
+- The 15-minute health deadline remains defense in depth; final frontend
+  verification completed in 286 seconds after the image pin.
