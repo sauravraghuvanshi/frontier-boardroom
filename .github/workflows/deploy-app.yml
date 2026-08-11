@@ -378,7 +378,8 @@ jobs:
 
           probe_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
             "${protected_url}/dev/router-probe")"
-          if [[ "$probe_status" != 302 && "$probe_status" != 401 && "$probe_status" != 404 ]]; then
+          if [[ "$probe_status" != 302 && "$probe_status" != 401 &&
+            "$probe_status" != 403 && "$probe_status" != 404 ]]; then
             echo "Router probe is public (HTTP $probe_status)" >&2
             exit 1
           fi
@@ -388,7 +389,8 @@ jobs:
             --header 'Content-Type: application/json' \
             --data '{"model_ref":"foundry:gpt-5"}' \
             "${protected_url}/api/v1/agent/CEO/swap-model")"
-          if [[ "$swap_status" != 302 && "$swap_status" != 401 && "$swap_status" != 404 ]]; then
+          if [[ "$swap_status" != 302 && "$swap_status" != 401 &&
+            "$swap_status" != 403 && "$swap_status" != 404 ]]; then
             echo "Model swap is public (HTTP $swap_status)" >&2
             exit 1
           fi
