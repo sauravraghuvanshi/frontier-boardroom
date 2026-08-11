@@ -257,6 +257,18 @@ The workflow uses the GitHub `prod` environment and requires
 secrets. These are non-secret identifiers for the federated deployment identity;
 runtime model credentials remain in Azure Key Vault.
 
+#### Verified production baseline — 2026-08-11
+
+- CI and production deployment completed successfully for commit `fcb88c1`.
+- Backend and frontend App Services are pinned to that same immutable image tag.
+- Frontend `/health` returned HTTP 200 with matching backend JSON and frontend
+  response-header build SHAs.
+- The frontend and administrative routes required authentication, while direct
+  public backend access returned HTTP 403.
+- Releases now update each image with one App Service configuration write,
+  verify both build SHAs, and restore the previous image pair automatically if
+  verification fails.
+
 ### Azure prerequisites
 
 1. An Azure subscription where you can create resources and role assignments.
