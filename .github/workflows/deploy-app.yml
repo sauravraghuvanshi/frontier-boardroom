@@ -87,6 +87,16 @@ jobs:
           echo "registry_name=${login_server%%.*}" >> "$GITHUB_OUTPUT"
           echo "backend_url=https://${BACKEND_APP}.azurewebsites.net" >> "$GITHUB_OUTPUT"
           echo "frontend_url=https://${FRONTEND_APP}.azurewebsites.net" >> "$GITHUB_OUTPUT"
+          echo "backend_id=$(az webapp show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$BACKEND_APP" \
+            --query 'id' \
+            --output tsv)" >> "$GITHUB_OUTPUT"
+          echo "frontend_id=$(az webapp show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$FRONTEND_APP" \
+            --query 'id' \
+            --output tsv)" >> "$GITHUB_OUTPUT"
           app_service_plan_id="$(az webapp show \
             --resource-group "$RESOURCE_GROUP" \
             --name "$BACKEND_APP" \
@@ -109,10 +119,12 @@ jobs:
           az acr build \
             --registry "$REGISTRY_NAME" \
             --image "frontier-backend:${DEPLOY_SHA}" \
+            --build-arg "APP_BUILD_SHA=${DEPLOY_SHA}" \
             backend
           az acr build \
             --registry "$REGISTRY_NAME" \
             --image "frontier-frontend:${DEPLOY_SHA}" \
+            --build-arg "APP_BUILD_SHA=${DEPLOY_SHA}" \
             --build-arg "VITE_API_BASE=${FRONTEND_URL}" \
             --build-arg "VITE_WS_BASE=${FRONTEND_URL/https:/wss:}" \
             --build-arg "VITE_ENTRA_AUTH_ENABLED=true" \
@@ -133,7 +145,7 @@ jobs:
             exit 1
           fi
 
-      - name: Reconcile App Service plan
+      - name: Validate App Service plan
         shell: bash
         env:
           APP_SERVICE_PLAN_ID: ${{ steps.targets.outputs.app_service_plan_id }}
@@ -144,22 +156,11 @@ jobs:
             --query 'sku.name' \
             --output tsv)"
           if [[ "$current_sku" != "S1" ]]; then
-            echo "Reconciling App Service plan from $current_sku to S1"
-            az appservice plan update \
-              --ids "$APP_SERVICE_PLAN_ID" \
-              --sku S1 \
-              --output none
-          fi
-          actual_sku="$(az appservice plan show \
-            --ids "$APP_SERVICE_PLAN_ID" \
-            --query 'sku.name' \
-            --output tsv)"
-          if [[ "$actual_sku" != "S1" ]]; then
-            echo "App Service plan reconciliation failed: expected S1, got $actual_sku" >&2
+            echo "App Service plan drifted: expected S1, got $current_sku; run the Bicep deployment before releasing images" >&2
             exit 1
           fi
 
-      - name: Apply public-demo safety settings
+      - name: Validate public-demo safety settings
         shell: bash
         run: |
           set -euo pipefail
@@ -195,46 +196,122 @@ jobs:
           done
 
           if [[ "$settings_changed" == "true" ]]; then
-            az webapp config appsettings set \
-              --resource-group "$RESOURCE_GROUP" \
-              --name "$BACKEND_APP" \
-              --settings \
-                PUBLIC_DEMO_LIMITS_ENABLED=true \
-                PUBLIC_SESSIONS_PER_CLIENT_HOUR=10 \
-                PUBLIC_SESSIONS_GLOBAL_HOUR=100 \
-                PUBLIC_DEBATES_PER_CLIENT_HOUR=3 \
-                PUBLIC_DEBATES_GLOBAL_HOUR=20 \
-                PUBLIC_PREP_TURNS_PER_CLIENT_HOUR=12 \
-                PUBLIC_PREP_TURNS_GLOBAL_HOUR=60 \
-                PUBLIC_ACTIVE_RUNS_PER_CLIENT=1 \
-                PUBLIC_ACTIVE_RUNS_GLOBAL=2 \
-                TRUST_FORWARDED_CLIENT_IP=false \
-              --output none
-          else
-            echo "Public-demo safety settings already match; skipping recycle"
+            echo "Public-demo safety settings drifted; run the Bicep deployment before releasing images" >&2
+            exit 1
           fi
+          echo "Public-demo safety settings match"
 
-      - name: Pin and restart applications
+      - name: Pin application images
+        id: pin
         shell: bash
         env:
+          BACKEND_APP_ID: ${{ steps.targets.outputs.backend_id }}
+          FRONTEND_APP_ID: ${{ steps.targets.outputs.frontend_id }}
           LOGIN_SERVER: ${{ steps.targets.outputs.login_server }}
+          FRONTEND_URL: ${{ steps.targets.outputs.frontend_url }}
         run: |
           set -euo pipefail
-          az webapp config container set \
+
+          backend_previous_image="$(az webapp config show \
             --resource-group "$RESOURCE_GROUP" \
             --name "$BACKEND_APP" \
-            --container-image-name "${LOGIN_SERVER}/frontier-backend:${DEPLOY_SHA}" \
-            --container-registry-url "https://${LOGIN_SERVER}" \
-            --output none
-          # Updating the container already recycles App Service. Let the private
-          # backend initialize before the frontend replacement starts.
-          sleep 90
-          az webapp config container set \
+            --query 'linuxFxVersion' \
+            --output tsv)"
+          frontend_previous_image="$(az webapp config show \
             --resource-group "$RESOURCE_GROUP" \
             --name "$FRONTEND_APP" \
-            --container-image-name "${LOGIN_SERVER}/frontier-frontend:${DEPLOY_SHA}" \
-            --container-registry-url "https://${LOGIN_SERVER}" \
+            --query 'linuxFxVersion' \
+            --output tsv)"
+
+          validate_registry_config() {
+            local app="$1"
+            local current_image="$2"
+            managed_identity="$(az webapp config show \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$app" \
+              --query 'acrUseManagedIdentityCreds' \
+              --output tsv)"
+            if [[ "$managed_identity" != "true" || "$current_image" != "DOCKER|${LOGIN_SERVER}/"* ]]; then
+              echo "Container registry configuration drift detected for $app" >&2
+              exit 1
+            fi
+          }
+          validate_registry_config "$BACKEND_APP" "$backend_previous_image"
+          validate_registry_config "$FRONTEND_APP" "$frontend_previous_image"
+
+          validate_pinned_config() {
+            local app_id="$1"
+            local expected_image="$2"
+            local config
+            config="$(az resource show \
+              --ids "${app_id}/config/web" \
+              --api-version 2023-12-01 \
+              --query 'properties.{image:linuxFxVersion, managedIdentity:acrUseManagedIdentityCreds, routeAll:vnetRouteAllEnabled, alwaysOn:alwaysOn}' \
+              --output json)"
+            if ! python -c \
+              'import json,sys; config=json.loads(sys.argv[1]); sys.exit(0 if config == {"image": sys.argv[2], "managedIdentity": True, "routeAll": True, "alwaysOn": True} else 1)' \
+              "$config" "$expected_image"; then
+              echo "Critical App Service configuration changed while pinning $app_id" >&2
+              exit 1
+            fi
+          }
+
+          printf 'previous_backend_image=%s\n' "$backend_previous_image" >> "$GITHUB_OUTPUT"
+          printf 'previous_frontend_image=%s\n' "$frontend_previous_image" >> "$GITHUB_OUTPUT"
+          previous_headers="$(mktemp)"
+          trap 'rm -f "$previous_headers"' EXIT
+          if ! previous_health="$(curl --fail --silent --show-error --max-time 15 \
+            --dump-header "$previous_headers" "${FRONTEND_URL}/health")"; then
+            echo "Current production pair is not healthy; refusing to start a release" >&2
+            exit 1
+          fi
+          previous_backend_build_sha="$(python -c \
+            'import json,sys; print(json.loads(sys.argv[1]).get("build_sha", ""))' \
+            "$previous_health")"
+          previous_frontend_build_sha="$(awk '
+            tolower($1) == "x-frontier-build-sha:" {
+              gsub("\r", "", $2)
+              value = $2
+            }
+            END { print value }
+          ' "$previous_headers")"
+          printf 'previous_backend_build_sha=%s\n' "$previous_backend_build_sha" >> "$GITHUB_OUTPUT"
+          printf 'previous_frontend_build_sha=%s\n' "$previous_frontend_build_sha" >> "$GITHUB_OUTPUT"
+
+          backend_image="DOCKER|${LOGIN_SERVER}/frontier-backend:${DEPLOY_SHA}"
+          echo "mutation_started=true" >> "$GITHUB_OUTPUT"
+          az resource update \
+            --ids "${BACKEND_APP_ID}/config/web" \
+            --api-version 2023-12-01 \
+            --set "properties.linuxFxVersion=${backend_image}" \
             --output none
+          validate_pinned_config "$BACKEND_APP_ID" "$backend_image"
+
+          backend_deadline=$((SECONDS + 300))
+          backend_ready=false
+          while (( SECONDS < backend_deadline )); do
+            if health="$(curl --fail --silent --show-error --max-time 15 "${FRONTEND_URL}/health")" &&
+              python -c \
+                'import json,sys; payload=json.loads(sys.argv[1]); sys.exit(0 if payload.get("status") == "ok" and payload.get("build_sha") == sys.argv[2] else 1)' \
+                "$health" "$DEPLOY_SHA"; then
+              backend_ready=true
+              break
+            fi
+            sleep 10
+          done
+          if [[ "$backend_ready" != "true" ]]; then
+            echo "Backend readiness was not observable through the old frontend; continuing so the frontend can rebind" >&2
+          fi
+
+          frontend_image="DOCKER|${LOGIN_SERVER}/frontier-frontend:${DEPLOY_SHA}"
+          echo "frontend_mutation_started=true" >> "$GITHUB_OUTPUT"
+          az resource update \
+            --ids "${FRONTEND_APP_ID}/config/web" \
+            --api-version 2023-12-01 \
+            --set "properties.linuxFxVersion=${frontend_image}" \
+            --output none
+
+          validate_pinned_config "$FRONTEND_APP_ID" "$frontend_image"
 
       - name: Verify production safety behavior
         shell: bash
@@ -248,17 +325,33 @@ jobs:
             --name "$FRONTEND_APP" \
             --query 'platform.enabled' \
             --output tsv)"
+          health_url="${FRONTEND_URL}/health"
           if [[ "$auth_enabled" == "true" ]]; then
-            health_url="${FRONTEND_URL}/health"
             protected_url="$FRONTEND_URL"
           else
-            health_url="${BACKEND_URL}/health"
             protected_url="$BACKEND_URL"
           fi
 
           health_started=$SECONDS
           health_deadline=$((health_started + 900))
-          until health="$(curl --fail --silent --show-error --max-time 15 "$health_url")"; do
+          health_headers="$(mktemp)"
+          trap 'rm -f "$health_headers"' EXIT
+          while true; do
+            if health="$(curl --fail --silent --show-error --max-time 15 \
+              --dump-header "$health_headers" "$health_url")"; then
+              frontend_build_sha="$(awk '
+                tolower($1) == "x-frontier-build-sha:" {
+                  gsub("\r", "", $2)
+                  value = $2
+                }
+                END { print value }
+              ' "$health_headers")"
+              if python -c \
+                'import json,sys; payload=json.loads(sys.argv[1]); sys.exit(0 if payload.get("status") == "ok" and payload.get("build_sha") == sys.argv[2] and sys.argv[3] == sys.argv[2] else 1)' \
+                "$health" "$DEPLOY_SHA" "$frontend_build_sha"; then
+                break
+              fi
+            fi
             if (( SECONDS >= health_deadline )); then
               echo "Application did not become healthy within 15 minutes" >&2
               exit 1
@@ -266,9 +359,6 @@ jobs:
             sleep 10
           done
           echo "Application became healthy after $((SECONDS - health_started)) seconds"
-          python -c \
-            'import json,sys; assert json.loads(sys.argv[1]) == {"status": "ok"}' \
-            "$health"
 
           if [[ "$auth_enabled" == "true" ]]; then
             frontend_status="$(curl --silent --output /dev/null --write-out '%{http_code}' \
@@ -302,3 +392,76 @@ jobs:
             echo "Model swap is public (HTTP $swap_status)" >&2
             exit 1
           fi
+
+      - name: Roll back failed release
+        if: ${{ (failure() || cancelled()) && steps.pin.outputs.mutation_started == 'true' }}
+        shell: bash
+        env:
+          BACKEND_APP_ID: ${{ steps.targets.outputs.backend_id }}
+          FRONTEND_APP_ID: ${{ steps.targets.outputs.frontend_id }}
+          FRONTEND_URL: ${{ steps.targets.outputs.frontend_url }}
+          PREVIOUS_BACKEND_IMAGE: ${{ steps.pin.outputs.previous_backend_image }}
+          PREVIOUS_BACKEND_BUILD_SHA: ${{ steps.pin.outputs.previous_backend_build_sha }}
+          PREVIOUS_FRONTEND_IMAGE: ${{ steps.pin.outputs.previous_frontend_image }}
+          PREVIOUS_FRONTEND_BUILD_SHA: ${{ steps.pin.outputs.previous_frontend_build_sha }}
+          FRONTEND_MUTATION_STARTED: ${{ steps.pin.outputs.frontend_mutation_started }}
+          REJECTED_BUILD_SHA: ${{ env.DEPLOY_SHA }}
+        run: |
+          set -euo pipefail
+          echo "Restoring previous application images"
+          az resource update \
+            --ids "${BACKEND_APP_ID}/config/web" \
+            --api-version 2023-12-01 \
+            --set "properties.linuxFxVersion=${PREVIOUS_BACKEND_IMAGE}" \
+            --output none
+          if [[ "$FRONTEND_MUTATION_STARTED" == "true" ]]; then
+            az resource update \
+              --ids "${FRONTEND_APP_ID}/config/web" \
+              --api-version 2023-12-01 \
+              --set "properties.linuxFxVersion=${PREVIOUS_FRONTEND_IMAGE}" \
+              --output none
+          fi
+
+          actual_backend_image="$(az resource show \
+            --ids "${BACKEND_APP_ID}/config/web" \
+            --api-version 2023-12-01 \
+            --query 'properties.linuxFxVersion' \
+            --output tsv)"
+          actual_frontend_image="$(az resource show \
+            --ids "${FRONTEND_APP_ID}/config/web" \
+            --api-version 2023-12-01 \
+            --query 'properties.linuxFxVersion' \
+            --output tsv)"
+          if [[ "$actual_backend_image" != "$PREVIOUS_BACKEND_IMAGE" ||
+            "$actual_frontend_image" != "$PREVIOUS_FRONTEND_IMAGE" ]]; then
+            echo "Rollback image references did not restore correctly" >&2
+            exit 1
+          fi
+
+          rollback_deadline=$((SECONDS + 900))
+          rollback_headers="$(mktemp)"
+          trap 'rm -f "$rollback_headers"' EXIT
+          while true; do
+            if health="$(curl --fail --silent --show-error --max-time 15 \
+              --dump-header "$rollback_headers" "${FRONTEND_URL}/health")"; then
+              frontend_build_sha="$(awk '
+                tolower($1) == "x-frontier-build-sha:" {
+                  gsub("\r", "", $2)
+                  value = $2
+                }
+                END { print value }
+              ' "$rollback_headers")"
+              if python -c \
+                'import json,sys; payload=json.loads(sys.argv[1]); backend_ok=payload.get("build_sha") == sys.argv[2] if sys.argv[2] else payload.get("build_sha") != sys.argv[4]; frontend_ok=sys.argv[3] == sys.argv[5] if sys.argv[3] else sys.argv[5] != sys.argv[4]; sys.exit(0 if payload.get("status") == "ok" and backend_ok and frontend_ok else 1)' \
+                "$health" "$PREVIOUS_BACKEND_BUILD_SHA" "$PREVIOUS_FRONTEND_BUILD_SHA" \
+                "$REJECTED_BUILD_SHA" "$frontend_build_sha"; then
+                echo "Previous application images restored"
+                break
+              fi
+            fi
+            if (( SECONDS >= rollback_deadline )); then
+              echo "Rollback did not become healthy within 15 minutes" >&2
+              exit 1
+            fi
+            sleep 10
+          done

@@ -9,6 +9,7 @@ RG="rg-frontier-boardroom-${ENV}"
 LOC=${LOCATION:-centralindia}
 ENABLE_ENTRA_AUTH=${ENABLE_ENTRA_AUTH:-false}
 ENTRA_CLIENT_ID=${ENTRA_CLIENT_ID:-}
+IMAGE_TAG=${CONTAINER_IMAGE_TAG:-$(git rev-parse HEAD)}
 
 if [[ "$ENABLE_ENTRA_AUTH" == "true" && -z "$ENTRA_CLIENT_ID" ]]; then
   echo "ENTRA_CLIENT_ID is required when ENABLE_ENTRA_AUTH=true" >&2
@@ -22,6 +23,7 @@ echo "==> Bicep what-if"
 az deployment group what-if -g "$RG" \
   -f infrastructure/bicep/main.bicep \
   -p env="$ENV" \
+  -p containerImageTag="$IMAGE_TAG" \
   -p adminObjectId="$(az ad signed-in-user show --query id -o tsv)" \
   -p enableEntraAuth="$ENABLE_ENTRA_AUTH" \
   -p entraClientId="$ENTRA_CLIENT_ID" \
@@ -31,6 +33,7 @@ echo "==> Bicep deploy"
 DEPLOY_OUT=$(az deployment group create -g "$RG" \
   -f infrastructure/bicep/main.bicep \
   -p env="$ENV" \
+  -p containerImageTag="$IMAGE_TAG" \
   -p adminObjectId="$(az ad signed-in-user show --query id -o tsv)" \
   -p enableEntraAuth="$ENABLE_ENTRA_AUTH" \
   -p entraClientId="$ENTRA_CLIENT_ID" \
@@ -59,15 +62,19 @@ python infrastructure/scripts/build_foundry_iq.py
 
 echo "==> Docker images"
 az acr login -n "${ACR%%.*}"
-docker build -t "${ACR}/frontier-backend:latest" backend/
 docker build \
+  --build-arg "APP_BUILD_SHA=${IMAGE_TAG}" \
+  -t "${ACR}/frontier-backend:${IMAGE_TAG}" \
+  backend/
+docker build \
+  --build-arg "APP_BUILD_SHA=${IMAGE_TAG}" \
   --build-arg "VITE_API_BASE=${FRONTEND}" \
   --build-arg "VITE_WS_BASE=${FRONTEND/https:/wss:}" \
   --build-arg "VITE_ENTRA_AUTH_ENABLED=${ENABLE_ENTRA_AUTH}" \
-  -t "${ACR}/frontier-frontend:latest" \
+  -t "${ACR}/frontier-frontend:${IMAGE_TAG}" \
   frontend/
-docker push "${ACR}/frontier-backend:latest"
-docker push "${ACR}/frontier-frontend:latest"
+docker push "${ACR}/frontier-backend:${IMAGE_TAG}"
+docker push "${ACR}/frontier-frontend:${IMAGE_TAG}"
 
 echo "==> Update web apps"
 az webapp restart -g "$RG" -n "app-frontier-${ENV}-backend"

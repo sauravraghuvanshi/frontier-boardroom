@@ -62,7 +62,7 @@ citation drawer, and audience-question QR. (The 3D scene was retired 2026-05-20
 
 ## Pre-demo production checks
 
-- Confirm backend `/health` returns `{"status":"ok"}`.
+- Confirm backend `/health` returns `status: ok` and the deployed commit SHA.
 - Confirm `/dev/router-probe`, `/dev/fake-debate`, and model-swap routes are not
   publicly accessible.
 - Run one CFO/Sonnet and one Legal/Opus prep turn and confirm each streams a

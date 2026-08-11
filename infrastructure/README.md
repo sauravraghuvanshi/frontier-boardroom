@@ -18,15 +18,21 @@ available through `workflow_dispatch`.
 Use the full provisioning path only for creating or changing Azure resources:
 
 ```bash
+IMAGE_TAG="$(git rev-parse HEAD)"
 az group create -n rg-frontier-boardroom-dev -l centralindia
 az deployment group what-if -g rg-frontier-boardroom-dev -f bicep/main.bicep \
-  -p env=dev adminObjectId=$(az ad signed-in-user show --query id -o tsv) \
+  -p env=dev containerImageTag="$IMAGE_TAG" \
+  -p adminObjectId=$(az ad signed-in-user show --query id -o tsv) \
   -p enableEntraAuth=false entraClientId=''
 az deployment group create -g rg-frontier-boardroom-dev -f bicep/main.bicep \
-  -p env=dev adminObjectId=$(az ad signed-in-user show --query id -o tsv) \
+  -p env=dev containerImageTag="$IMAGE_TAG" \
+  -p adminObjectId=$(az ad signed-in-user show --query id -o tsv) \
   -p enableEntraAuth=false entraClientId='' \
   -p anthropicApiKey=$ANTHROPIC_API_KEY
 ```
+
+Always pass the immutable tag you intend the App Services to run. The one-shot
+script uses the current Git commit by default and builds that exact tag.
 
 The one-shot script performs the remaining setup in order:
 
@@ -45,9 +51,12 @@ GitHub-hosted runner cannot use the vault's public data-plane endpoint.
   and is reverse-proxied over the VNet to a private backend.
 - The frontend pins App Service's VNet DNS resolver so private backend
   resolution remains stable across container restarts.
-- Releases update the backend image first and allow its App Service recycle to
-  begin before updating the frontend. Container updates already recycle the
-  apps, so the workflow does not layer additional explicit restarts on top.
+- Releases patch only the `linuxFxVersion` config resource, producing one App
+  Service write per app. The backend image embeds its commit SHA; the workflow
+  waits for the existing frontend proxy to report that SHA before updating the
+  frontend image, then verifies the frontend's own SHA response header.
+- Failed releases restore both previously pinned image references and wait for
+  the prior frontend/backend pair to become healthy.
 - Production verification allows a bounded 15-minute recovery window. The live
   B1 plan required about 10 minutes to restore private proxy health during the
   2026-08-11 release, exceeding the prior eight-minute window.
@@ -60,12 +69,12 @@ GitHub-hosted runner cannot use the vault's public data-plane endpoint.
 - Key Vault public access is disabled and the backend reaches it through VNet
   integration and a private endpoint.
 - Production images use immutable commit SHA tags.
-- Every release reconciles the App Service plan to the Bicep-declared S1 tier
-  before replacing containers.
+- Every release validates the Bicep-declared S1 tier and fails on drift before
+  replacing containers.
 - Paid-model operations retain per-client/global quotas and concurrency caps as
   defense in depth after sign-in.
-- Releases compare those safety settings before writing them so unchanged
-  values do not cause an extra backend recycle.
+- Releases validate those Bicep-managed safety settings before changing images
+  and fail on drift instead of recycling the backend during an app release.
 - Provider probes and model swapping are unavailable publicly.
 - Runtime RBAC is scoped to the individual ACR, Key Vault secret or vault,
   storage account, Search service, Speech/Language account, and Foundry project.
@@ -92,7 +101,8 @@ az deployment group what-if \
   -g rg-frontier-boardroom-prod \
   -f infrastructure/bicep/main.bicep \
   -p env=prod \
-     adminObjectId="$(az ad signed-in-user show --query id -o tsv)" \
+  containerImageTag="<currently deployed commit SHA>" \
+  adminObjectId="$(az ad signed-in-user show --query id -o tsv)" \
      enableEntraAuth=true \
      entraClientId="$ENTRA_CLIENT_ID" \
      runtimeSecretsReady=true
@@ -138,8 +148,8 @@ Key learnings:
 - Local container tooling is not required for authoritative validation when ACR
   no-push builds are available.
 - The Bicep template declares an S1 App Service plan, but live validation on
-  2026-08-10 reported B1. Releases now reconcile that drift before replacing
-  containers.
+  2026-08-10 reported B1. Releases now block on that drift before replacing
+  containers; production was reconciled to S1 on 2026-08-11.
 - A subsequent B1 release on 2026-08-11 restored private proxy health about
   10 minutes after verification began; deployment checks now retain a
   15-minute hard deadline as defense in depth.

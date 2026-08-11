@@ -1,3 +1,5 @@
+ARG APP_BUILD_SHA=local
+
 FROM node:20-alpine AS build
 WORKDIR /app
 
@@ -14,6 +16,8 @@ COPY . .
 RUN chmod -R +x node_modules/.bin && npx vite build
 
 FROM node:20-alpine AS runner
+ARG APP_BUILD_SHA
+ENV APP_BUILD_SHA=$APP_BUILD_SHA
 WORKDIR /app
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/node_modules ./node_modules

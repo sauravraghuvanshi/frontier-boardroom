@@ -287,12 +287,14 @@ From the repository root:
 ```bash
 ENVIRONMENT=dev
 RESOURCE_GROUP="rg-frontier-boardroom-${ENVIRONMENT}"
+IMAGE_TAG="$(git rev-parse HEAD)"
 
 az group create --name "$RESOURCE_GROUP" --location centralindia
 az deployment group what-if \
   --resource-group "$RESOURCE_GROUP" \
   --template-file infrastructure/bicep/main.bicep \
   --parameters env="$ENVIRONMENT" \
+               containerImageTag="$IMAGE_TAG" \
                adminObjectId="$(az ad signed-in-user show --query id --output tsv)" \
                enableEntraAuth=false \
                entraClientId=""
@@ -300,10 +302,15 @@ az deployment group create \
   --resource-group "$RESOURCE_GROUP" \
   --template-file infrastructure/bicep/main.bicep \
   --parameters env="$ENVIRONMENT" \
+               containerImageTag="$IMAGE_TAG" \
                adminObjectId="$(az ad signed-in-user show --query id --output tsv)" \
                enableEntraAuth=false \
                entraClientId=""
 ```
+
+Always pass the immutable tag you intend the App Services to run. The example
+uses the current Git commit so infrastructure deployment cannot silently roll
+the apps back.
 
 ### 3. Prepare model and knowledge services
 
@@ -331,16 +338,18 @@ BACKEND_URL="https://app-frontier-dev-backend.azurewebsites.net"
 az acr login --name "${ACR_LOGIN_SERVER%%.*}"
 
 docker build \
-  --tag "$ACR_LOGIN_SERVER/frontier-backend:latest" \
+  --build-arg "APP_BUILD_SHA=$IMAGE_TAG" \
+  --tag "$ACR_LOGIN_SERVER/frontier-backend:$IMAGE_TAG" \
   backend
 docker build \
+  --build-arg "APP_BUILD_SHA=$IMAGE_TAG" \
   --build-arg VITE_API_BASE="$BACKEND_URL" \
   --build-arg VITE_WS_BASE="${BACKEND_URL/https:/wss:}" \
-  --tag "$ACR_LOGIN_SERVER/frontier-frontend:latest" \
+  --tag "$ACR_LOGIN_SERVER/frontier-frontend:$IMAGE_TAG" \
   frontend
 
-docker push "$ACR_LOGIN_SERVER/frontier-backend:latest"
-docker push "$ACR_LOGIN_SERVER/frontier-frontend:latest"
+docker push "$ACR_LOGIN_SERVER/frontier-backend:$IMAGE_TAG"
+docker push "$ACR_LOGIN_SERVER/frontier-frontend:$IMAGE_TAG"
 ```
 
 Restart both web apps after publishing:
