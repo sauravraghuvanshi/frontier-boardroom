@@ -62,6 +62,8 @@ GitHub-hosted runner cannot use the vault's public data-plane endpoint.
 - Key Vault public access is disabled and the backend reaches it through VNet
   integration and a private endpoint.
 - Production images use immutable commit SHA tags.
+- Every release reconciles the App Service plan to the Bicep-declared S1 tier
+  before replacing containers.
 - Paid-model operations retain per-client/global quotas and concurrency caps as
   defense in depth after sign-in.
 - Provider probes and model swapping are unavailable publicly.
@@ -135,9 +137,9 @@ Key learnings:
   Linux runners.
 - Local container tooling is not required for authoritative validation when ACR
   no-push builds are available.
-- The Bicep template declares an S1 App Service plan. Live validation on
-  2026-08-10 reported B1, so this configuration drift should be reconciled during
-  the next full infrastructure deployment.
+- The Bicep template declares an S1 App Service plan, but live validation on
+  2026-08-10 reported B1. Releases now reconcile that drift before replacing
+  containers.
 - A subsequent B1 release on 2026-08-11 restored private proxy health about
   10 minutes after verification began; deployment checks now retain a
-  15-minute hard deadline while the S1 drift remains unresolved.
+  15-minute hard deadline as defense in depth.

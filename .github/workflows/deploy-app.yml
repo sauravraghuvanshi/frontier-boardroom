@@ -87,6 +87,16 @@ jobs:
           echo "registry_name=${login_server%%.*}" >> "$GITHUB_OUTPUT"
           echo "backend_url=https://${BACKEND_APP}.azurewebsites.net" >> "$GITHUB_OUTPUT"
           echo "frontend_url=https://${FRONTEND_APP}.azurewebsites.net" >> "$GITHUB_OUTPUT"
+          app_service_plan_id="$(az webapp show \
+            --resource-group "$RESOURCE_GROUP" \
+            --name "$BACKEND_APP" \
+            --query 'serverFarmId' \
+            --output tsv)"
+          if [[ -z "$app_service_plan_id" ]]; then
+            echo "No App Service plan found for $BACKEND_APP" >&2
+            exit 1
+          fi
+          echo "app_service_plan_id=$app_service_plan_id" >> "$GITHUB_OUTPUT"
 
       - name: Build immutable images in ACR
         shell: bash
@@ -120,6 +130,32 @@ jobs:
             --jq '.sha')"
           if [[ "$DEPLOY_SHA" != "$current_master" ]]; then
             echo "Master advanced during build; refusing stale deployment" >&2
+            exit 1
+          fi
+
+      - name: Reconcile App Service plan
+        shell: bash
+        env:
+          APP_SERVICE_PLAN_ID: ${{ steps.targets.outputs.app_service_plan_id }}
+        run: |
+          set -euo pipefail
+          current_sku="$(az appservice plan show \
+            --ids "$APP_SERVICE_PLAN_ID" \
+            --query 'sku.name' \
+            --output tsv)"
+          if [[ "$current_sku" != "S1" ]]; then
+            echo "Reconciling App Service plan from $current_sku to S1"
+            az appservice plan update \
+              --ids "$APP_SERVICE_PLAN_ID" \
+              --sku S1 \
+              --output none
+          fi
+          actual_sku="$(az appservice plan show \
+            --ids "$APP_SERVICE_PLAN_ID" \
+            --query 'sku.name' \
+            --output tsv)"
+          if [[ "$actual_sku" != "S1" ]]; then
+            echo "App Service plan reconciliation failed: expected S1, got $actual_sku" >&2
             exit 1
           fi
 
