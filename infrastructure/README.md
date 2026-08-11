@@ -45,11 +45,9 @@ GitHub-hosted runner cannot use the vault's public data-plane endpoint.
   and is reverse-proxied over the VNet to a private backend.
 - The frontend pins App Service's VNet DNS resolver so private backend
   resolution remains stable across container restarts.
-- Releases recycle the backend first and delay the frontend restart so the
-  private proxy never initializes against a backend that is still restarting.
-- Frontend container replacement is followed by a delayed second recycle; this
-  sequence is verified against production because image replacement starts its
-  own overlapping App Service recycle.
+- Releases update the backend image first and allow its App Service recycle to
+  begin before updating the frontend. Container updates already recycle the
+  apps, so the workflow does not layer additional explicit restarts on top.
 - Production verification allows a bounded 15-minute recovery window. The live
   B1 plan required about 10 minutes to restore private proxy health during the
   2026-08-11 release, exceeding the prior eight-minute window.
