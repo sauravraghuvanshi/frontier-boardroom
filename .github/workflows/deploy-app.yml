@@ -163,21 +163,56 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          az webapp config appsettings set \
+          declare -A expected_settings=(
+            [PUBLIC_DEMO_LIMITS_ENABLED]=true
+            [PUBLIC_SESSIONS_PER_CLIENT_HOUR]=10
+            [PUBLIC_SESSIONS_GLOBAL_HOUR]=100
+            [PUBLIC_DEBATES_PER_CLIENT_HOUR]=3
+            [PUBLIC_DEBATES_GLOBAL_HOUR]=20
+            [PUBLIC_PREP_TURNS_PER_CLIENT_HOUR]=12
+            [PUBLIC_PREP_TURNS_GLOBAL_HOUR]=60
+            [PUBLIC_ACTIVE_RUNS_PER_CLIENT]=1
+            [PUBLIC_ACTIVE_RUNS_GLOBAL]=2
+            [TRUST_FORWARDED_CLIENT_IP]=false
+          )
+          declare -A current_settings=()
+          while IFS=$'\t' read -r name value; do
+            if [[ -n "${expected_settings[$name]+x}" ]]; then
+              current_settings["$name"]="$value"
+            fi
+          done < <(az webapp config appsettings list \
             --resource-group "$RESOURCE_GROUP" \
             --name "$BACKEND_APP" \
-            --settings \
-              PUBLIC_DEMO_LIMITS_ENABLED=true \
-              PUBLIC_SESSIONS_PER_CLIENT_HOUR=10 \
-              PUBLIC_SESSIONS_GLOBAL_HOUR=100 \
-              PUBLIC_DEBATES_PER_CLIENT_HOUR=3 \
-              PUBLIC_DEBATES_GLOBAL_HOUR=20 \
-              PUBLIC_PREP_TURNS_PER_CLIENT_HOUR=12 \
-              PUBLIC_PREP_TURNS_GLOBAL_HOUR=60 \
-              PUBLIC_ACTIVE_RUNS_PER_CLIENT=1 \
-              PUBLIC_ACTIVE_RUNS_GLOBAL=2 \
-              TRUST_FORWARDED_CLIENT_IP=false \
-            --output none
+            --query '[].[name,value]' \
+            --output tsv)
+
+          settings_changed=false
+          for name in "${!expected_settings[@]}"; do
+            if [[ "${current_settings[$name]-}" != "${expected_settings[$name]}" ]]; then
+              settings_changed=true
+              break
+            fi
+          done
+
+          if [[ "$settings_changed" == "true" ]]; then
+            az webapp config appsettings set \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$BACKEND_APP" \
+              --settings \
+                PUBLIC_DEMO_LIMITS_ENABLED=true \
+                PUBLIC_SESSIONS_PER_CLIENT_HOUR=10 \
+                PUBLIC_SESSIONS_GLOBAL_HOUR=100 \
+                PUBLIC_DEBATES_PER_CLIENT_HOUR=3 \
+                PUBLIC_DEBATES_GLOBAL_HOUR=20 \
+                PUBLIC_PREP_TURNS_PER_CLIENT_HOUR=12 \
+                PUBLIC_PREP_TURNS_GLOBAL_HOUR=60 \
+                PUBLIC_ACTIVE_RUNS_PER_CLIENT=1 \
+                PUBLIC_ACTIVE_RUNS_GLOBAL=2 \
+                TRUST_FORWARDED_CLIENT_IP=false \
+              --output none
+          else
+            echo "Public-demo safety settings already match; skipping recycle"
+          fi
 
       - name: Pin and restart applications
         shell: bash

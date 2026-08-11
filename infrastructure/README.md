@@ -64,6 +64,8 @@ GitHub-hosted runner cannot use the vault's public data-plane endpoint.
   before replacing containers.
 - Paid-model operations retain per-client/global quotas and concurrency caps as
   defense in depth after sign-in.
+- Releases compare those safety settings before writing them so unchanged
+  values do not cause an extra backend recycle.
 - Provider probes and model swapping are unavailable publicly.
 - Runtime RBAC is scoped to the individual ACR, Key Vault secret or vault,
   storage account, Search service, Speech/Language account, and Foundry project.
