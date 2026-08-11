@@ -1,13 +1,26 @@
-import { defineConfig } from "vite";
+import { defineConfig, type ProxyOptions } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
 
 const backendTarget = process.env.BACKEND_PROXY_TARGET;
+const frontendBuildSha = process.env.APP_BUILD_SHA ?? "local";
+const configureHealthProxy: NonNullable<ProxyOptions["configure"]> = (
+  proxyServer,
+) => {
+  proxyServer.on("proxyRes", (proxyResponse) => {
+    proxyResponse.headers["x-frontier-build-sha"] = frontendBuildSha;
+  });
+};
 const proxy = backendTarget
   ? {
       "/api": { target: backendTarget, changeOrigin: true, secure: true },
       "/dev": { target: backendTarget, changeOrigin: true, secure: true },
-      "/health": { target: backendTarget, changeOrigin: true, secure: true },
+      "/health": {
+        target: backendTarget,
+        changeOrigin: true,
+        secure: true,
+        configure: configureHealthProxy,
+      },
       "/ws": {
         target: backendTarget,
         changeOrigin: true,

@@ -13,6 +13,9 @@ param env string = 'dev'
 @description('Azure region')
 param location string = resourceGroup().location
 
+@description('Immutable container image tag to pin on both App Services')
+param containerImageTag string
+
 @description('Object id of the principal that should get Key Vault Secrets Officer (you, normally)')
 param adminObjectId string
 
@@ -165,6 +168,7 @@ module apps 'appservice.bicep' = {
     searchIndexName: 'boardroom-knowledge-idx'
     foundryKbName: 'boardroom-iq'
     backendSubnetId: network.outputs.appServiceSubnetId
+    containerImageTag: containerImageTag
     enableEntraAuth: enableEntraAuth
     entraClientId: entraClientId
     entraTenantId: subscription().tenantId

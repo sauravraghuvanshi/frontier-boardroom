@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -67,8 +68,8 @@ app.include_router(ws_prep.router)
 
 
 @app.get("/health")
-async def health() -> dict:
-    return {"status": "ok"}
+async def health() -> dict[str, str]:
+    return {"status": "ok", "build_sha": os.environ.get("APP_BUILD_SHA", "local")}
 
 
 @app.get("/dev/router-probe")

@@ -11,6 +11,7 @@ param searchEndpoint string = ''
 param searchIndexName string = 'boardroom-knowledge-idx'
 param foundryKbName string = 'boardroom-iq'
 param backendSubnetId string
+param containerImageTag string
 param enableEntraAuth bool
 param entraClientId string
 param entraTenantId string
@@ -44,7 +45,7 @@ resource backend 'Microsoft.Web/sites@2023-12-01' = {
     publicNetworkAccess: enableEntraAuth ? 'Disabled' : 'Enabled'
     virtualNetworkSubnetId: backendSubnetId
     siteConfig: {
-      linuxFxVersion: 'DOCKER|${acrLoginServer}/frontier-backend:latest'
+      linuxFxVersion: 'DOCKER|${acrLoginServer}/frontier-backend:${containerImageTag}'
       acrUseManagedIdentityCreds: true
       vnetRouteAllEnabled: true
       alwaysOn: true
@@ -103,7 +104,7 @@ resource frontend 'Microsoft.Web/sites@2023-12-01' = {
     httpsOnly: true
     virtualNetworkSubnetId: backendSubnetId
     siteConfig: {
-      linuxFxVersion: 'DOCKER|${acrLoginServer}/frontier-frontend:latest'
+      linuxFxVersion: 'DOCKER|${acrLoginServer}/frontier-frontend:${containerImageTag}'
       acrUseManagedIdentityCreds: true
       vnetRouteAllEnabled: true
       alwaysOn: true
