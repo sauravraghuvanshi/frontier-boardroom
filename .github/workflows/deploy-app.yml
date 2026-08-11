@@ -192,16 +192,16 @@ jobs:
             protected_url="$BACKEND_URL"
           fi
 
-          for attempt in {1..48}; do
-            if health="$(curl --fail --silent --show-error --max-time 15 "$health_url")"; then
-              break
-            fi
-            if [[ "$attempt" == 48 ]]; then
-              echo "Application did not become healthy" >&2
+          health_started=$SECONDS
+          health_deadline=$((health_started + 900))
+          until health="$(curl --fail --silent --show-error --max-time 15 "$health_url")"; do
+            if (( SECONDS >= health_deadline )); then
+              echo "Application did not become healthy within 15 minutes" >&2
               exit 1
             fi
             sleep 10
           done
+          echo "Application became healthy after $((SECONDS - health_started)) seconds"
           python -c \
             'import json,sys; assert json.loads(sys.argv[1]) == {"status": "ok"}' \
             "$health"
