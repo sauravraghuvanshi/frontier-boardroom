@@ -192,11 +192,11 @@ jobs:
             protected_url="$BACKEND_URL"
           fi
 
-          for attempt in {1..30}; do
+          for attempt in {1..48}; do
             if health="$(curl --fail --silent --show-error --max-time 15 "$health_url")"; then
               break
             fi
-            if [[ "$attempt" == 30 ]]; then
+            if [[ "$attempt" == 48 ]]; then
               echo "Application did not become healthy" >&2
               exit 1
             fi
