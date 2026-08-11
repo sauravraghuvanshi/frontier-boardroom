@@ -191,22 +191,15 @@ jobs:
             --container-image-name "${LOGIN_SERVER}/frontier-backend:${DEPLOY_SHA}" \
             --container-registry-url "https://${LOGIN_SERVER}" \
             --output none
-          az webapp restart --resource-group "$RESOURCE_GROUP" --name "$BACKEND_APP"
-          # The private backend must finish recycling before the frontend proxy
-          # opens its first connection and caches the route.
-          sleep 60
+          # Updating the container already recycles App Service. Let the private
+          # backend initialize before the frontend replacement starts.
+          sleep 90
           az webapp config container set \
             --resource-group "$RESOURCE_GROUP" \
             --name "$FRONTEND_APP" \
             --container-image-name "${LOGIN_SERVER}/frontier-frontend:${DEPLOY_SHA}" \
             --container-registry-url "https://${LOGIN_SERVER}" \
             --output none
-          az webapp restart --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_APP"
-          # Container replacement starts its own recycle. A delayed second
-          # recycle is required for the proxy process to bind VNet DNS after
-          # the replacement instance is fully initialized.
-          sleep 60
-          az webapp restart --resource-group "$RESOURCE_GROUP" --name "$FRONTEND_APP"
 
       - name: Verify production safety behavior
         shell: bash
